@@ -1,6 +1,9 @@
 # Ampoose Next
 
+![Ampoose Icon](icon.png)
+
 [![wakatime](https://wakatime.com/badge/user/a0b906ce-b8e7-4463-8bce-383238df6d4b/project/b242e6f4-8e78-494d-b0fa-775531afed9c.svg)](https://wakatime.com/badge/user/a0b906ce-b8e7-4463-8bce-383238df6d4b/project/b242e6f4-8e78-494d-b0fa-775531afed9c)
+[![codecov](https://codecov.io/gh/ragaeeb/ampoose/graph/badge.svg?token=MPIZITMBJJ)](https://codecov.io/gh/ragaeeb/ampoose)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Chrome Extension](https://img.shields.io/badge/chrome-extension-brightgreen.svg)](https://developer.chrome.com/docs/extensions/)
 [![Manifest V3](https://img.shields.io/badge/manifest-v3-orange.svg)](https://developer.chrome.com/docs/extensions/mv3/)
@@ -73,4 +76,3 @@ ampoose-wxt/
 - `docs/migration-status.md` — migration progress and validation notes.
 - `docs/manual-smoke-checklist.md` — manual release gate.
 - `docs/CHANGELOG.md` — shipped change history.
-
