@@ -7,9 +7,9 @@ The runtime is Ampoose-owned and does not rely on upstream bundles.
 ## Read Order (Start Here)
 1. `README.md` — project overview, constraints, and usage.
 2. `docs/chrome-web-store-submission.md` — Chrome Web Store listing notes, single-purpose, permissions.
-3. `privacy-policy.md` — privacy policy for store submission (canonical).
-3. `src/runtime/controller/runController.ts` — active runtime orchestration.
-4. `tests/legacy-parity/*` — runtime and contract suite.
+3. `docs/privacy-policy.md` — privacy policy for store submission (canonical).
+4. `src/runtime/controller/runController.ts` — active runtime orchestration.
+5. `tests/legacy-parity/*` — runtime and contract suite.
 
 ## Repo Layout
 - `wxt.config.ts` — WXT config and MV3 manifest fields.
@@ -31,6 +31,11 @@ The runtime is Ampoose-owned and does not rely on upstream bundles.
 - `bun run test` — run bun:test suite.
 - `bun run test:coverage` — run tests with coverage.
 - `bun run check` — strict TypeScript check.
+
+## Coding Standards
+- **Tests**: All unit tests must use the `it('should ...')` convention.
+- **TypeScript**: Prefer inferred return types for functions whenever possible (avoid explicit `: Type` unless necessary).
+- **Functions**: Prefer arrow functions (`const foo = () => {}`) over classical `function foo() {}` declarations.
 
 ## Minimal Feature Contract (Must Keep)
 - Filter posts by date.

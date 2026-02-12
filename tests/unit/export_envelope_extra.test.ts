@@ -8,6 +8,7 @@ describe('export envelope (extra)', () => {
         expect(extractProfileUrlFromPost({ author: { profile: 'https://example.com/author' } })).toBe(
             'https://example.com/author',
         );
+        expect(extractProfileUrlFromPost({ author: { profile: '' } })).toBe('');
     });
 
     it('should extract a cleaned author object', () => {

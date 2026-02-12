@@ -7,6 +7,7 @@ import { loadCalibrationArtifact, saveCalibrationArtifact } from '@/runtime/cali
 import { RunController } from '@/runtime/controller/runController';
 import { queryProfileTimelinePage } from '@/runtime/query/profileTimeline';
 import { App } from '@/ui/App';
+import type { AppProps } from '@/ui/App';
 
 function headersToRecord(headers: HeadersInit | undefined): Record<string, string> {
     if (!headers) {
@@ -61,7 +62,7 @@ export type MountAppDeps = {
     saveCalibrationArtifact: typeof saveCalibrationArtifact;
     RunController: typeof RunController;
     queryProfileTimelinePage: typeof queryProfileTimelinePage;
-    App: ComponentType<any>;
+    App: ComponentType<AppProps>;
 };
 
 export function createMountApp(deps: MountAppDeps) {
@@ -96,7 +97,7 @@ export function createMountApp(deps: MountAppDeps) {
             return new Response(result.body, responseInit);
         };
         const graphqlClient = deps.createGraphqlClient({
-            fetchImpl: mainWorldFetchImpl as unknown as typeof fetch,
+            fetchImpl: mainWorldFetchImpl,
             loadArtifact: deps.loadCalibrationArtifact,
         });
 
@@ -154,7 +155,7 @@ export function createMountApp(deps: MountAppDeps) {
                     onContinue={() => controller.continue()}
                     onDownload={() => controller.downloadJson()}
                     onDownloadLogs={() => controller.downloadLogsJson()}
-                    onSetMode={(mode: number) => controller.updateSettings({ fetchingCountType: mode })}
+                    onSetMode={(mode) => controller.updateSettings({ fetchingCountType: mode })}
                     onSetCount={(count: number) => controller.updateSettings({ fetchingCountByPostCountValue: count })}
                     onSetDays={(days: number) => controller.updateSettings({ fetchingCountByPostDaysValue: days })}
                     onSetUseDateFilter={(value: boolean) => controller.updateSettings({ isUsePostsFilter: value })}

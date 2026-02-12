@@ -4,7 +4,7 @@ import type { ControllerState } from '@/runtime/controller/types';
 import { FETCH_MODE, type FetchingCountType } from '@/runtime/settings/types';
 import './styles.css';
 
-type Props = {
+export type AppProps = {
     state: ControllerState;
     onOpen: (open: boolean) => void;
     onStart: () => Promise<void>;
@@ -278,7 +278,13 @@ function CalibrationControls({
                     <button type="button" onClick={onCalibrationStop} className="button button-secondary">
                         Stop
                     </button>
-                    <button type="button" onClick={() => void onCalibrationSave()} className="button button-primary">
+                    <button
+                        type="button"
+                        onClick={() => {
+                            void onCalibrationSave().catch(() => {});
+                        }}
+                        className="button button-primary"
+                    >
                         Save Calibration
                     </button>
                 </>
@@ -312,10 +318,22 @@ function ExportControls({
                 <button type="button" onClick={onPrimary} className="button button-primary button-large">
                     {primaryText}
                 </button>
-                <button type="button" onClick={() => void onDownload()} className="button button-secondary button-large">
+                <button
+                    type="button"
+                    onClick={() => {
+                        void onDownload().catch(() => {});
+                    }}
+                    className="button button-secondary button-large"
+                >
                     JSON
                 </button>
-                <button type="button" onClick={() => void onDownloadLogs()} className="button button-secondary button-large">
+                <button
+                    type="button"
+                    onClick={() => {
+                        void onDownloadLogs().catch(() => {});
+                    }}
+                    className="button button-secondary button-large"
+                >
                     Logs
                 </button>
             </div>
@@ -360,7 +378,7 @@ export function App({
     onCalibrationStart,
     onCalibrationStop,
     onCalibrationSave,
-}: Props) {
+}: AppProps) {
     const logsViewportRef = useRef<HTMLDivElement | null>(null);
     const logoUrl = resolveLogoUrl();
     const showExportControls = state.calibrationStatus === 'ready';

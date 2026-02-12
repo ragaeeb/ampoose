@@ -1,8 +1,16 @@
-import { describe, expect, it, mock } from 'bun:test';
+import { afterEach, describe, expect, it, mock } from 'bun:test';
 import { buildGraphqlArtifact } from '@/domain/calibration/artifact';
 import { createGraphqlClient } from '@/domain/graphql/client';
 
 describe('graphql client ambient params', () => {
+    afterEach(() => {
+        document.body.innerHTML = '';
+        document.cookie = '';
+        delete (window as unknown as Record<string, unknown>).__spin_b;
+        delete (window as unknown as Record<string, unknown>).__spin_r;
+        delete (window as unknown as Record<string, unknown>).__spin_t;
+    });
+
     it('should include ambient params from cookies, inputs, and window spin values', async () => {
         // biome-ignore lint/suspicious/noDocumentCookie: this code path reads document.cookie
         document.cookie = 'c_user=123;';

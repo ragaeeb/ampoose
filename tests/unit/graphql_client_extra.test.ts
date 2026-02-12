@@ -23,10 +23,68 @@ afterEach(() => {
 });
 
 describe('graphql client extra branches', () => {
+    it('should fail NDJSON parsing when one line is invalid JSON', async () => {
+        const client = createGraphqlClient({
+            fetchImpl: (async () => new Response('{"data":{"ok":true}}\n{not-json}', { status: 200 })) as unknown as typeof fetch,
+            loadArtifact: async () => artifact,
+        });
+
+        await expect(
+            client.request({
+                endpoint: '/api/graphql/',
+                queryName: 'ProfileCometTimelineFeedRefetchQuery',
+            }),
+        ).rejects.toThrow('GraphQL response parse failed');
+    });
+
+    it('should use fallback endpoint when not on a facebook host', async () => {
+        window.location.href = 'https://example.com/profile';
+        const urls: string[] = [];
+
+        const client = createGraphqlClient({
+            fetchImpl: (async (input: RequestInfo | URL) => {
+                const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+                urls.push(url);
+                if (url === '/api/graphql/') {
+                    return new Response(JSON.stringify({ data: { ok: true } }), { status: 200 });
+                }
+                return new Response('not found', { status: 404 });
+            }) as unknown as typeof fetch,
+            loadArtifact: async () => artifact,
+        });
+
+        const result = await client.request<{ data: { ok: boolean } }>({
+            queryName: 'ProfileCometTimelineFeedRefetchQuery',
+        });
+
+        expect(result.data.ok).toBe(true);
+        expect(urls[0]).toBe('/api/graphql/');
+    });
+
+    it('should request successfully when document is unavailable', async () => {
+        const originalDocument = (globalThis as any).document;
+        try {
+            delete (globalThis as any).document;
+            const client = createGraphqlClient({
+                fetchImpl: (async () => new Response(JSON.stringify({ data: { ok: true } }), { status: 200 })) as unknown as typeof fetch,
+                loadArtifact: async () => artifact,
+            });
+            const result = await client.request<{ data: { ok: boolean } }>({
+                endpoint: '/api/graphql/',
+                queryName: 'ProfileCometTimelineFeedRefetchQuery',
+            });
+            expect(result.data.ok).toBe(true);
+        } finally {
+            (globalThis as any).document = originalDocument;
+        }
+    });
+
     it("parses responses prefixed with )]}' and picks payload containing errors", async () => {
         const client = createGraphqlClient({
             fetchImpl: (async () =>
-                new Response(")]}'\n{\"meta\":1}\n{\"errors\":[{\"message\":\"fail\"}]}", { status: 200 })) as typeof fetch,
+                new Response(")]}'\n{\"meta\":1}\n{\"errors\":[{\"message\":\"fail\"}]}", {
+                    status: 200,
+                })) as unknown as typeof fetch,
             loadArtifact: async () => artifact,
         });
 
@@ -40,7 +98,7 @@ describe('graphql client extra branches', () => {
 
     it('falls back to first NDJSON payload when no data/errors payload exists', async () => {
         const client = createGraphqlClient({
-            fetchImpl: (async () => new Response('1\n{"meta":true}', { status: 200 })) as typeof fetch,
+            fetchImpl: (async () => new Response('1\n{"meta":true}', { status: 200 })) as unknown as typeof fetch,
             loadArtifact: async () => artifact,
         });
 
@@ -55,7 +113,7 @@ describe('graphql client extra branches', () => {
     it('returns parse failure preview for non-json single-line body', async () => {
         const invalid = 'x'.repeat(400);
         const client = createGraphqlClient({
-            fetchImpl: (async () => new Response(invalid, { status: 200 })) as typeof fetch,
+            fetchImpl: (async () => new Response(invalid, { status: 200 })) as unknown as typeof fetch,
             loadArtifact: async () => artifact,
         });
 
@@ -69,7 +127,7 @@ describe('graphql client extra branches', () => {
 
     it('omits preview in request failure when body is empty after trimming', async () => {
         const client = createGraphqlClient({
-            fetchImpl: (async () => new Response('   ', { status: 500 })) as typeof fetch,
+            fetchImpl: (async () => new Response('   ', { status: 500 })) as unknown as typeof fetch,
             loadArtifact: async () => artifact,
         });
 
@@ -92,7 +150,7 @@ describe('graphql client extra branches', () => {
         const calls: URLSearchParams[] = [];
         const client = createGraphqlClient({
             fetchImpl: (async (_input: RequestInfo | URL, init?: RequestInit) => {
-                const body = init?.body as URLSearchParams;
+                const body = new URLSearchParams(String(init?.body ?? ''));
                 calls.push(body);
                 return new Response(JSON.stringify({ data: { ok: true } }), { status: 200 });
             }) as typeof fetch,

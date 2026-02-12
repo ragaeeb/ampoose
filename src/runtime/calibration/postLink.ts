@@ -31,7 +31,7 @@ export function isLikelyPostPermalink(href: string, baseHref = 'https://www.face
     }
 
     if (pathname.endsWith('/permalink.php') || pathname === '/permalink.php') {
-        return Boolean(parsed.searchParams.get('story_fbid') || parsed.searchParams.get('fbid'));
+        return Boolean(parsed.searchParams.get('fbid'));
     }
 
     const postsId = getPostsSegmentId(pathname);

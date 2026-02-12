@@ -61,7 +61,7 @@ function isGraphqlArtifactV1Like(value: unknown): value is Pick<GraphqlArtifactV
         return false;
     }
     const data = value as Partial<GraphqlArtifactV1>;
-    return data.schemaVersion === 1 && Boolean(data.entries) && typeof data.entries === 'object';
+    return data.schemaVersion === 1 && Boolean(data.entries) && typeof data.entries === 'object' && !Array.isArray(data.entries);
 }
 
 function normalizeArtifactEntry(name: string, entry: unknown): GraphqlArtifactEntry | null {

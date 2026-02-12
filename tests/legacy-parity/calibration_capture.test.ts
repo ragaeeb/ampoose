@@ -1,8 +1,8 @@
-import { expect, test } from 'bun:test';
+import { expect, it } from 'bun:test';
 import { Window } from 'happy-dom';
 import { createCalibrationCaptureManager } from '../../src/runtime/calibration/capture';
 
-test('calibration capture records required query docIds from graphql requests', async () => {
+it('should record required query docIds from graphql requests', async () => {
     const windowObj = new Window({ url: 'https://www.facebook.com/' });
     const originalWindow = globalThis.window;
     const originalXHR = globalThis.XMLHttpRequest;
@@ -45,7 +45,7 @@ test('calibration capture records required query docIds from graphql requests', 
         expect(artifact.entries.CometSinglePostDialogContentQuery?.docId).toBe('222');
         expect('cursor' in artifact.entries.ProfileCometTimelineFeedRefetchQuery!.variables).toBe(false);
         expect(artifact.entries.ProfileCometTimelineFeedRefetchQuery?.variables.id).toBe('profile-id-1');
-        expect(artifact.entries.ProfileCometTimelineFeedRefetchQuery?.requestParams?.__a).toBe('1');
+        expect(artifact.entries.ProfileCometTimelineFeedRefetchQuery?.requestParams?.__a).toBeUndefined();
     } finally {
         globalThis.window = originalWindow;
         globalThis.XMLHttpRequest = originalXHR;
@@ -53,7 +53,7 @@ test('calibration capture records required query docIds from graphql requests', 
     }
 });
 
-test('calibration capture supports batched `queries` payload shape', async () => {
+it('should support batched `queries` payload shape', async () => {
     const windowObj = new Window({ url: 'https://www.facebook.com/' });
     const originalWindow = globalThis.window;
     const originalXHR = globalThis.XMLHttpRequest;
@@ -98,7 +98,7 @@ test('calibration capture supports batched `queries` payload shape', async () =>
     }
 });
 
-test('calibration capture handles Request input bodies and query-name aliases', async () => {
+it('should handle Request input bodies and query-name aliases', async () => {
     const windowObj = new Window({ url: 'https://www.facebook.com/' });
     const originalWindow = globalThis.window;
     const originalXHR = globalThis.XMLHttpRequest;
@@ -145,7 +145,7 @@ test('calibration capture handles Request input bodies and query-name aliases', 
     }
 });
 
-test('calibration capture exposes unmatched graphql query names for diagnostics', async () => {
+it('should expose unmatched graphql query names for diagnostics', async () => {
     const windowObj = new Window({ url: 'https://www.facebook.com/' });
     const originalWindow = globalThis.window;
     const originalXHR = globalThis.XMLHttpRequest;

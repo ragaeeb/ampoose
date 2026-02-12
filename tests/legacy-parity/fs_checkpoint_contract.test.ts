@@ -1,7 +1,7 @@
-import { expect, test } from 'bun:test';
+import { expect, it } from 'bun:test';
 import { buildFsSessionCheckpoint } from '../../src/domain/fs/checkpoint';
 
-test('fs checkpoint contract', () => {
+it('should match fs checkpoint contract', () => {
     const checkpoint = buildFsSessionCheckpoint({
         author: { id: 'a1', name: 'Author' },
         collectionId: 'collection-1',

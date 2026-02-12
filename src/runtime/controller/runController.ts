@@ -1,4 +1,4 @@
-import { getMissingRequiredQueries } from '@/domain/calibration/artifact';
+import { getMissingRequiredQueries, normalizeGraphqlArtifact } from '@/domain/calibration/artifact';
 import {
     buildChunkIndex,
     buildChunkIndexFilename,
@@ -75,6 +75,10 @@ function filterPostsForExport(
     posts: RuntimePost[],
     dateFilter: DateFilterWindow,
 ): { valid: RuntimePost[]; filteredOut: number; boundaryReached: boolean } {
+    const resolveCreatedAtMs = (post: RuntimePost, sanitized: ReturnType<typeof sanitizeExportPost>) => {
+        return toEpochMs(post.createdAt ?? sanitized?.createdAt);
+    };
+
     const valid = posts.filter((post) => {
         const sanitized = sanitizeExportPost(post);
         if (!sanitized) {
@@ -83,7 +87,7 @@ function filterPostsForExport(
         if (!dateFilter.active) {
             return true;
         }
-        const createdAtMs = toEpochMs(post.createdAt ?? sanitized.createdAt);
+        const createdAtMs = resolveCreatedAtMs(post, sanitized);
         return createdAtMs > 0 && createdAtMs >= dateFilter.cutoffMs;
     });
 
@@ -94,7 +98,11 @@ function filterPostsForExport(
     }
 
     const boundaryReached = posts.some((post) => {
-        const createdAtMs = toEpochMs(post.createdAt);
+        const sanitized = sanitizeExportPost(post);
+        if (!sanitized) {
+            return false;
+        }
+        const createdAtMs = resolveCreatedAtMs(post, sanitized);
         return createdAtMs > 0 && createdAtMs < dateFilter.cutoffMs;
     });
 
@@ -218,8 +226,12 @@ export class RunController {
             );
             return;
         }
-        const artifact = await this.deps.calibrationClient.buildArtifact();
-        await this.deps.saveCalibration(artifact as any);
+        const artifactInput = await this.deps.calibrationClient.buildArtifact();
+        const artifact = normalizeGraphqlArtifact(artifactInput);
+        if (!artifact) {
+            throw new Error('calibration: invalid artifact payload from capture');
+        }
+        await this.deps.saveCalibration(artifact);
         this.state.calibrationStatus = 'ready';
         this.addLog('info', 'calibration: saved from capture');
         await this.deps.calibrationClient.stopCapture();
@@ -247,18 +259,22 @@ export class RunController {
         this.emit();
     }
 
-    async start() {
+    async start(options: { resume?: boolean; cursor?: string | null } = {}) {
         await this.loadCalibrationStatus();
         if (this.state.calibrationStatus !== 'ready') {
             throw new Error('DocId calibration required before export.');
         }
 
-        this.prepareNewRun();
+        if (options.resume) {
+            this.prepareResumeRun();
+        } else {
+            this.prepareNewRun();
+        }
 
         this.addLog('info', 'run: start');
 
         try {
-            await this.runExportLoop();
+            await this.runExportLoop(options.cursor ?? null);
             this.state.step = 'DONE';
             this.emit();
         } catch (error) {
@@ -285,7 +301,14 @@ export class RunController {
         this.logStore.clear();
     }
 
-    private async runExportLoop(): Promise<void> {
+    private prepareResumeRun() {
+        this.abortController = new AbortController();
+        this.state.step = 'DOWNLOADING';
+        this.state.isStopManually = false;
+        this.state.error = null;
+    }
+
+    private async runExportLoop(initialCursor: string | null = null): Promise<void> {
         if (!this.abortController) {
             throw new Error('abort controller missing');
         }
@@ -324,7 +347,7 @@ export class RunController {
             );
         };
 
-        let cursor: string | null = null;
+        let cursor: string | null = initialCursor;
         while (!this.state.isStopManually) {
             const dateFilter = computeDateFilterWindow(this.state.settings);
 
@@ -424,13 +447,14 @@ export class RunController {
     }
 
     async continue() {
-        if (!this.state.progress.nextCursor) {
+        const cursor = this.state.progress.nextCursor;
+        if (!cursor) {
             this.addLog('warn', 'run: no next cursor to continue');
             return;
         }
         this.state.isOnLimit = false;
         this.state.step = 'DOWNLOADING';
-        await this.start();
+        await this.start({ cursor, resume: true });
     }
 
     async downloadJson(options: { auto?: boolean } = {}) {

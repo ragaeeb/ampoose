@@ -2,6 +2,28 @@ import { buildGraphqlArtifact, getMissingRequiredQueries } from '@/domain/calibr
 import type { GraphqlArtifactEntry, GraphqlArtifactV1 } from '@/domain/types';
 
 type CaptureMap = Map<string, GraphqlArtifactEntry>;
+const SENSITIVE_REQUEST_KEYS = new Set([
+    'access_token',
+    'fb_dtsg',
+    'jazoest',
+    'lsd',
+    'session_id',
+    '__a',
+    '__csr',
+    '__req',
+    '__s',
+    '__user',
+]);
+const VARIABLE_STRIP_KEYS = new Set([
+    'cursor',
+    'after',
+    'before',
+    'afterTime',
+    'beforeTime',
+    'story_id',
+    'storyID',
+    ...SENSITIVE_REQUEST_KEYS,
+]);
 
 function tryParseJson(value: unknown): Record<string, unknown> {
     if (!value) {
@@ -137,29 +159,9 @@ async function readRequestBody(request: RequestLike): Promise<unknown> {
 }
 
 function sanitizeVariables(value: Record<string, unknown>): Record<string, unknown> {
-    const stripKeys = new Set([
-        'cursor',
-        'after',
-        'before',
-        'afterTime',
-        'beforeTime',
-        'story_id',
-        'storyID',
-        'fb_dtsg',
-        'jazoest',
-        'lsd',
-        'access_token',
-        '__user',
-        'session_id',
-        '__csr',
-        '__s',
-        '__a',
-        '__req',
-    ]);
-
     const output: Record<string, unknown> = {};
     for (const [key, entry] of Object.entries(value)) {
-        if (stripKeys.has(key) || key.startsWith('__spin_')) {
+        if (VARIABLE_STRIP_KEYS.has(key) || key.startsWith('__spin_')) {
             continue;
         }
         output[key] = entry;
@@ -183,6 +185,9 @@ function extractRequestParams(params: URLSearchParams): Record<string, string> {
     const out: Record<string, string> = {};
     for (const [key, value] of params.entries()) {
         if (skipKeys.has(key)) {
+            continue;
+        }
+        if (SENSITIVE_REQUEST_KEYS.has(key) || key.startsWith('__spin_')) {
             continue;
         }
         if (!value) {
@@ -272,13 +277,14 @@ function extractBatchedQueries(params: URLSearchParams): BatchedQueryEntry[] {
 function captureFromParams(capture: CaptureMap, unmatched: Map<string, string>, params: URLSearchParams) {
     const name = getParamsQueryName(params);
     const docId = getParamsDocId(params);
+    const requestParams = extractRequestParams(params);
     captureDocIdEntry(
         capture,
         name,
         docId,
         tryParseJson(params.get('variables') ?? '{}'),
         unmatched,
-        extractRequestParams(params),
+        requestParams,
     );
 
     const batched = extractBatchedQueries(params);
@@ -286,7 +292,6 @@ function captureFromParams(capture: CaptureMap, unmatched: Map<string, string>, 
         return;
     }
 
-    const requestParams = extractRequestParams(params);
     for (const query of batched) {
         captureDocIdEntry(capture, query.name, query.docId, query.variables, unmatched, requestParams);
     }
@@ -335,6 +340,7 @@ export function createCalibrationCaptureManager() {
                 handleRequest(url, init?.body);
 
                 // Some callers pass a Request object directly; capture that body too.
+                // Fire-and-forget by design: capture is best-effort and should not block network flow.
                 if (!init?.body && isRequestLike(input)) {
                     void readRequestBody(input).then((body) => {
                         if (!body) {

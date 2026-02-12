@@ -29,10 +29,16 @@ describe('mountApp', () => {
         const createGraphqlClient = mock((deps: any) => {
             return {
                 request: async () => {
-                    await deps.fetchImpl('/api/graphql/', {
-                        body: new URLSearchParams({ a: '1' }),
-                        headers: new Headers({ a: 'b' }),
-                        method: 'POST',
+                await deps.fetchImpl('/api/graphql/', {
+                    body: 'a=1&b=2',
+                    headers: { z: '1' },
+                    method: 'POST',
+                });
+
+                await deps.fetchImpl('/api/graphql/', {
+                    body: new URLSearchParams({ a: '1' }),
+                    headers: new Headers({ a: 'b' }),
+                    method: 'POST',
                     });
 
                     const form = new FormData();
@@ -43,11 +49,17 @@ describe('mountApp', () => {
                         method: 'post',
                     });
 
-                    await deps.fetchImpl('/api/graphql/', {
-                        body: new Blob(['hi'], { type: 'text/plain' }),
-                        headers: { y: 2 },
-                        method: 'POST',
-                    });
+                await deps.fetchImpl('/api/graphql/', {
+                    body: new Blob(['hi'], { type: 'text/plain' }),
+                    headers: { y: 2 },
+                    method: 'POST',
+                });
+
+                await deps.fetchImpl('/api/graphql/', {
+                    body: { k: 1 } as any,
+                    headers: { y: 2 },
+                    method: 'POST',
+                });
 
                     await deps.fetchImpl('/api/graphql/', { method: 'POST' });
                     return { ok: true };
@@ -159,11 +171,15 @@ describe('mountApp', () => {
 
             async saveCalibrationFromCapture() {
                 controllerCalls.push('saveCalibrationFromCapture');
+                await this.deps.calibrationClient.getStatus();
+                await this.deps.calibrationClient.buildArtifact();
+                await this.deps.calibrationClient.stopCapture();
             }
         }
 
+        let captured: any;
         const App = (props: any) => {
-            (globalThis as any).__capturedMountProps = props;
+            captured = props;
             return null;
         };
 
@@ -182,7 +198,6 @@ describe('mountApp', () => {
         const container = document.createElement('div');
         const unmount = mountApp(container);
 
-        const captured = (globalThis as any).__capturedMountProps as any;
         expect(captured).toBeTruthy();
 
         await captured.onStart();
@@ -193,10 +208,10 @@ describe('mountApp', () => {
         captured.onSetCount(10);
         captured.onSetDays(3);
         captured.onSetUseDateFilter(true);
-        captured.onStop();
+        await captured.onStop();
         await captured.onContinue();
-        captured.onCalibrationStart();
-        captured.onCalibrationStop();
+        await captured.onCalibrationStart();
+        await captured.onCalibrationStop();
         await captured.onCalibrationSave();
 
         expect(createGraphqlClient).toHaveBeenCalledTimes(1);

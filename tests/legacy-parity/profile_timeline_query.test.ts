@@ -1,7 +1,7 @@
-import { expect, test } from 'bun:test';
+import { expect, it } from 'bun:test';
 import { extractTimelinePageFromResponse, queryProfileTimelinePage } from '../../src/runtime/query/profileTimeline';
 
-test('timeline parser extracts posts and next cursor from feed edges payload', () => {
+it('should extract posts and next cursor from feed edges payload', () => {
     const response = {
         data: {
             node: {
@@ -95,7 +95,7 @@ test('timeline parser extracts posts and next cursor from feed edges payload', (
     });
 });
 
-test('timeline parser handles streamed payload arrays (node chunks + page_info chunk)', () => {
+it('should handle streamed payload arrays (node chunks + page_info chunk)', () => {
     const streamedPayload = [
         {
             data: {
@@ -136,7 +136,7 @@ test('timeline parser handles streamed payload arrays (node chunks + page_info c
     expect(page.posts[0]?.post_id).toBe('post-1');
 });
 
-test('timeline query sends calibrated query name and cursor override', async () => {
+it('should send calibrated query name and cursor override', async () => {
     const requests: Array<{
         queryName: string;
         variables?: Record<string, unknown>;
@@ -171,7 +171,7 @@ test('timeline query sends calibrated query name and cursor override', async () 
     expect(page).toEqual({ nextCursor: null, posts: [] });
 });
 
-test('timeline query throws when GraphQL errors are returned without page data', async () => {
+it('should throw when GraphQL errors are returned without page data', async () => {
     await expect(
         queryProfileTimelinePage(
             {
@@ -187,4 +187,80 @@ test('timeline query throws when GraphQL errors are returned without page data',
             { cursor: null },
         ),
     ).rejects.toThrow('timeline query returned GraphQL errors');
+});
+
+it('should handle null payload and invalid timeline nodes safely', () => {
+    expect(extractTimelinePageFromResponse(null)).toEqual({ nextCursor: null, posts: [] });
+
+    const response = {
+        data: {
+            node: {
+                timeline_list_feed_units: {
+                    edges: [
+                        { node: 'not-an-object' },
+                        { node: { comet_sections: {} } },
+                    ],
+                },
+            },
+        },
+    };
+    const page = extractTimelinePageFromResponse(response);
+    expect(page.posts).toEqual([]);
+    expect(page.nextCursor).toBeNull();
+});
+
+it('should resolve creation_time from fallback metadata and normalize numeric strings', () => {
+    const response = {
+        data: {
+            node: {
+                timeline_list_feed_units: {
+                    edges: [
+                        {
+                            node: {
+                                comet_sections: {
+                                    content: {
+                                        story: {
+                                            attachments: [],
+                                            message: {
+                                                text: 'fallback time post',
+                                            },
+                                        },
+                                    },
+                                    context_layout: {
+                                        story: {
+                                            comet_sections: {
+                                                metadata: [{ story: { creation_time: '1700000100' } }],
+                                            },
+                                        },
+                                    },
+                                },
+                                id: 'story-x',
+                                post_id: 'post-x',
+                            },
+                        },
+                    ],
+                    page_info: {
+                        end_cursor: '',
+                        has_next_page: true,
+                    },
+                },
+            },
+        },
+    };
+    const page = extractTimelinePageFromResponse(response);
+    expect(page.posts[0]?.createdAt).toBe(1700000100);
+    expect(page.nextCursor).toBeNull();
+});
+
+it('should ignore malformed GraphQL errors when message is missing', async () => {
+    await expect(
+        queryProfileTimelinePage(
+            {
+                request: async () => ({
+                    errors: ['bad', { code: 'X' }],
+                }),
+            },
+            { cursor: null },
+        ),
+    ).resolves.toEqual({ nextCursor: null, posts: [] });
 });

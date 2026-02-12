@@ -1,7 +1,7 @@
-import { expect, test } from 'bun:test';
+import { expect, it } from 'bun:test';
 import { createDuplicatePageGuard } from '../../src/runtime/state/duplicateGuard';
 
-test('duplicate guard stops after 5 full-duplicate pages', () => {
+it('should stop after 5 full-duplicate pages', () => {
     const guard = createDuplicatePageGuard(5);
 
     for (let i = 1; i <= 4; i += 1) {
@@ -30,4 +30,28 @@ test('duplicate guard stops after 5 full-duplicate pages', () => {
     });
     expect(reset.streak).toBe(0);
     expect(reset.shouldStop).toBe(false);
+});
+
+it('should reset streak when reset() is called', () => {
+    const guard = createDuplicatePageGuard(5);
+    guard.evaluate({
+        allModeWithoutDateFilter: true,
+        dedupedCount: 3,
+        fetchedCount: 3,
+    });
+    guard.evaluate({
+        allModeWithoutDateFilter: true,
+        dedupedCount: 3,
+        fetchedCount: 3,
+    });
+
+    guard.reset();
+
+    const next = guard.evaluate({
+        allModeWithoutDateFilter: true,
+        dedupedCount: 3,
+        fetchedCount: 3,
+    });
+    expect(next.streak).toBe(1);
+    expect(next.shouldStop).toBe(false);
 });

@@ -1,7 +1,7 @@
-import { expect, test } from 'bun:test';
+import { expect, it } from 'bun:test';
 import { buildResumeTransferPayload, normalizeImportedResumePayload } from '../../src/domain/resume/transfer';
 
-test('resume payload contract', () => {
+it('should match resume payload contract', () => {
     const payload = buildResumeTransferPayload(
         'collection-1',
         {
@@ -23,4 +23,35 @@ test('resume payload contract', () => {
 
     expect(normalizeImportedResumePayload(payload)).toEqual(payload);
     expect(normalizeImportedResumePayload({ format: 'x' })).toBeNull();
+});
+
+it('should reject malformed imported payload shapes', () => {
+    expect(normalizeImportedResumePayload(null)).toBeNull();
+    expect(
+        normalizeImportedResumePayload({
+            collectionId: 'c1',
+            exportedAt: 1,
+            format: 'ampoose-resume-cursors-v1',
+            resumeCursors: {},
+            version: 2,
+        }),
+    ).toBeNull();
+    expect(
+        normalizeImportedResumePayload({
+            collectionId: 123,
+            exportedAt: 1,
+            format: 'ampoose-resume-cursors-v1',
+            resumeCursors: {},
+            version: 1,
+        }),
+    ).toBeNull();
+    expect(
+        normalizeImportedResumePayload({
+            collectionId: 'c1',
+            exportedAt: '1',
+            format: 'ampoose-resume-cursors-v1',
+            resumeCursors: {},
+            version: 1,
+        }),
+    ).toBeNull();
 });

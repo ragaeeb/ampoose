@@ -1,15 +1,15 @@
-import { expect, test } from 'bun:test';
+import { expect, it } from 'bun:test';
 import { buildChunkIndex, createChunkState, flushPostsChunk, getChunkSignature } from '../../src/domain/chunk/chunking';
-import type { ExportPost } from '../../src/domain/types';
 
-function createPosts(count: number): ExportPost[] {
+
+const createPosts = (count: number) => {
     return Array.from({ length: count }).map((_, idx) => ({
         content: `post ${idx}`,
         id: `p-${idx}`,
     }));
-}
+};
 
-test('chunk contract: filenames and index format', () => {
+it('should generate correct filenames and index format', () => {
     const state = createChunkState(21);
     const first = flushPostsChunk(state, createPosts(550), false);
 

@@ -6,6 +6,7 @@ describe('normalizeGraphqlArtifact', () => {
         expect(normalizeGraphqlArtifact(null)).toBeNull();
         expect(normalizeGraphqlArtifact({})).toBeNull();
         expect(normalizeGraphqlArtifact('not-json')).toBeNull();
+        expect(normalizeGraphqlArtifact({ schemaVersion: 1, entries: [] })).toBeNull();
     });
 
     it('should parse stringified artifacts and normalize request params', () => {

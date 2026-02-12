@@ -334,4 +334,100 @@ describe('App', () => {
         await user.click(screen.getByRole('button', { name: /^close$/i }));
         expect(onOpen).toHaveBeenCalledWith(false);
     });
+
+    it('should show error banner and compact long cursor values in logs', () => {
+        render(
+            <App
+                state={makeState({
+                    calibrationStatus: 'ready',
+                    error: 'something broke',
+                    logs: [
+                        {
+                            id: 1,
+                            msg: 'page: cursor=abcdefghijklmnopqrstuvwxyz0123456789 next=abcdefghijklmnopqrstuvwxyz0123456789',
+                            type: 'info',
+                        },
+                    ] as any,
+                    step: 'DONE',
+                })}
+                onOpen={mock(() => {})}
+                onStart={mock(async () => {})}
+                onStop={mock(() => {})}
+                onContinue={mock(async () => {})}
+                onDownload={mock(async () => {})}
+                onDownloadLogs={mock(async () => {})}
+                onSetMode={mock(() => {})}
+                onSetCount={mock(() => {})}
+                onSetDays={mock(() => {})}
+                onSetUseDateFilter={mock(() => {})}
+                onCalibrationStart={mock(() => {})}
+                onCalibrationStop={mock(() => {})}
+                onCalibrationSave={mock(async () => {})}
+            />,
+        );
+
+        expect(screen.getByText('something broke')).toBeTruthy();
+        expect(screen.getByText(/\[\w+\] page: cursor=.{12}\.\.\..{10} next=.{12}\.\.\..{10}/i)).toBeTruthy();
+    });
+
+    it('should show recalibrate action when calibration is ready at START', async () => {
+        const onCalibrationStart = mock(() => {});
+        render(
+            <App
+                state={makeState({ calibrationStatus: 'ready', step: 'START' })}
+                onOpen={mock(() => {})}
+                onStart={mock(async () => {})}
+                onStop={mock(() => {})}
+                onContinue={mock(async () => {})}
+                onDownload={mock(async () => {})}
+                onDownloadLogs={mock(async () => {})}
+                onSetMode={mock(() => {})}
+                onSetCount={mock(() => {})}
+                onSetDays={mock(() => {})}
+                onSetUseDateFilter={mock(() => {})}
+                onCalibrationStart={onCalibrationStart}
+                onCalibrationStop={mock(() => {})}
+                onCalibrationSave={mock(async () => {})}
+            />,
+        );
+
+        const user = userEvent.setup();
+        await user.click(screen.getByRole('button', { name: /recalibrate/i }));
+        expect(onCalibrationStart).toHaveBeenCalledTimes(1);
+    });
+
+    it('should invoke JSON and Logs download actions', async () => {
+        const onDownload = mock(async () => {
+            throw new Error('expected test rejection');
+        });
+        const onDownloadLogs = mock(async () => {
+            throw new Error('expected test rejection');
+        });
+
+        render(
+            <App
+                state={makeState({ calibrationStatus: 'ready', step: 'START' })}
+                onOpen={mock(() => {})}
+                onStart={mock(async () => {})}
+                onStop={mock(() => {})}
+                onContinue={mock(async () => {})}
+                onDownload={onDownload}
+                onDownloadLogs={onDownloadLogs}
+                onSetMode={mock(() => {})}
+                onSetCount={mock(() => {})}
+                onSetDays={mock(() => {})}
+                onSetUseDateFilter={mock(() => {})}
+                onCalibrationStart={mock(() => {})}
+                onCalibrationStop={mock(() => {})}
+                onCalibrationSave={mock(async () => {})}
+            />,
+        );
+
+        const user = userEvent.setup();
+        await user.click(screen.getByRole('button', { name: /^json$/i }));
+        await user.click(screen.getByRole('button', { name: /^logs$/i }));
+
+        expect(onDownload).toHaveBeenCalledTimes(1);
+        expect(onDownloadLogs).toHaveBeenCalledTimes(1);
+    });
 });

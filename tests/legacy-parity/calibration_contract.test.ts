@@ -1,4 +1,4 @@
-import { expect, mock, test } from 'bun:test';
+import { expect, mock, it } from 'bun:test';
 import {
     buildGraphqlArtifact,
     getMissingRequiredQueries,
@@ -6,7 +6,7 @@ import {
 } from '../../src/domain/calibration/artifact';
 import { createGraphqlClient } from '../../src/domain/graphql/client';
 
-test('calibration contract: missing/partial/valid', () => {
+it('should handle missing/partial/valid calibration contract', () => {
     const missing = normalizeGraphqlArtifact(null);
     expect(missing).toBeNull();
 
@@ -44,7 +44,7 @@ test('calibration contract: missing/partial/valid', () => {
     expect(getMissingRequiredQueries(valid)).toEqual([]);
 });
 
-test('calibration contract: timeline entry must include profile id', () => {
+it('should require timeline entry to include profile id', () => {
     const partialMissingId = normalizeGraphqlArtifact({
         entries: {
             ProfileCometTimelineFeedRefetchQuery: {
@@ -62,7 +62,7 @@ test('calibration contract: timeline entry must include profile id', () => {
     expect(getMissingRequiredQueries(partialMissingId)).toEqual(['ProfileCometTimelineFeedRefetchQuery']);
 });
 
-test('graphql client fails fast when calibration is missing', async () => {
+it('should fail fast when calibration is missing', async () => {
     const client = createGraphqlClient({
         fetchImpl: mock(async () => new Response('{}')) as unknown as typeof fetch,
         loadArtifact: async () => null,
@@ -75,7 +75,7 @@ test('graphql client fails fast when calibration is missing', async () => {
     ).rejects.toThrow('Calibration missing required entries');
 });
 
-test('graphql client uses local calibration entries and does not depend on graphql-info host', async () => {
+it('should use local calibration entries and not depend on graphql-info host', async () => {
     const calls: Array<{ url: string; body: string }> = [];
 
     const client = createGraphqlClient({
@@ -124,7 +124,7 @@ test('graphql client uses local calibration entries and does not depend on graph
     expect(calls[0]?.body.includes('__a=1')).toBe(true);
 });
 
-test('graphql client parses anti-hijacking prefixed JSON responses', async () => {
+it('should parse anti-hijacking prefixed JSON responses', async () => {
     const client = createGraphqlClient({
         fetchImpl: (async () =>
             new Response('for (;;);{"data":{"ok":true}}', {
@@ -149,7 +149,7 @@ test('graphql client parses anti-hijacking prefixed JSON responses', async () =>
     expect(result.data.ok).toBe(true);
 });
 
-test('graphql client parses newline-delimited json payloads', async () => {
+it('should parse newline-delimited json payloads', async () => {
     const client = createGraphqlClient({
         fetchImpl: (async () =>
             new Response('{"data":{"ok":true,"node":{"id":"100026362418520"}}}\n{"extensions":{"is_final":true}}', {
@@ -174,7 +174,7 @@ test('graphql client parses newline-delimited json payloads', async () => {
     expect(result.data.ok).toBe(true);
 });
 
-test('graphql client returns full payload list for newline-delimited responses when responseMode=all', async () => {
+it('should return full payload list for newline-delimited responses when responseMode=all', async () => {
     const client = createGraphqlClient({
         fetchImpl: (async () =>
             new Response('{"data":{"node":{"id":"100026362418520"}}}\n{"data":{"page_info":{"has_next_page":false}}}', {
@@ -201,7 +201,7 @@ test('graphql client returns full payload list for newline-delimited responses w
     expect(result.length).toBe(2);
 });
 
-test('graphql client returns actionable error when response body is empty', async () => {
+it('should return actionable error when response body is empty', async () => {
     const client = createGraphqlClient({
         fetchImpl: (async () => new Response('', { status: 200 })) as unknown as typeof fetch,
         loadArtifact: async () =>
@@ -222,7 +222,7 @@ test('graphql client returns actionable error when response body is empty', asyn
     ).rejects.toThrow('GraphQL response body empty');
 });
 
-test('graphql client retries with /graphql/query when default /api/graphql body is empty', async () => {
+it('should retry with /graphql/query when default /api/graphql body is empty', async () => {
     const calls: string[] = [];
     const client = createGraphqlClient({
         fetchImpl: (async (input: RequestInfo | URL) => {
@@ -256,7 +256,7 @@ test('graphql client retries with /graphql/query when default /api/graphql body 
     expect(calls.includes('/graphql/query/')).toBe(true);
 });
 
-test('graphql client retries same endpoint without captured request params when stale params fail', async () => {
+it('should retry same endpoint without captured request params when stale params fail', async () => {
     const calls: Array<{ url: string; body: string }> = [];
     const client = createGraphqlClient({
         fetchImpl: (async (input: RequestInfo | URL, init?: RequestInit) => {

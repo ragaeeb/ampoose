@@ -3,6 +3,7 @@ import type { GraphqlArtifactV1 } from '@/domain/types';
 const TIMELINE_QUERY_NAME = 'ProfileCometTimelineFeedRefetchQuery';
 const DOWNLOAD_DEFAULT_FILENAME = 'posts.json';
 const DOWNLOAD_DEFAULT_FOLDER = 'collection';
+const FORBIDDEN_PATH_CHARS = new Set(['<', '>', ':', '"', '/', '\\', '|', '?', '*']);
 
 const RESERVED_PROFILE_SEGMENTS = new Set([
     'about',
@@ -72,12 +73,11 @@ function sanitizePathToken(value: string): string {
         return '';
     }
 
-    const forbidden = new Set(['<', '>', ':', '"', '/', '\\', '|', '?', '*']);
     let out = '';
     for (const ch of raw) {
         const code = ch.codePointAt(0) ?? 0;
         // Replace control chars + filesystem-invalid tokens with underscores.
-        if (code <= 31 || code === 127 || forbidden.has(ch)) {
+        if (code <= 31 || code === 127 || FORBIDDEN_PATH_CHARS.has(ch)) {
             out += '_';
             continue;
         }

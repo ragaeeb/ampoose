@@ -1,7 +1,7 @@
-import { expect, test } from 'bun:test';
+import { expect, it } from 'bun:test';
 import { LOG_PAYLOAD_LIMIT, LOG_STORE_LIMIT, LogStore, normalizeLogPayload } from '../../src/runtime/logs/logStore';
 
-test('log store enforces size cap', () => {
+it('should enforce log store size cap', () => {
     const store = new LogStore();
     for (let i = 0; i < LOG_STORE_LIMIT + 25; i += 1) {
         store.add('info', `log-${i}`);
@@ -12,7 +12,7 @@ test('log store enforces size cap', () => {
     expect(logs[0]?.msg).toBe('log-25');
 });
 
-test('log payload normalization truncates long strings and errors', () => {
+it('should truncate long strings and errors', () => {
     const long = 'x'.repeat(LOG_PAYLOAD_LIMIT + 100);
     const normalized = normalizeLogPayload(long);
     expect(typeof normalized).toBe('string');

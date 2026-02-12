@@ -1,4 +1,5 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
+import type { ContentScriptContext } from 'wxt/utils/content-script-context';
 import { createShadowRootUi } from 'wxt/utils/content-script-ui/shadow-root';
 import { mountApp } from '@/ui/mount';
 
@@ -8,7 +9,7 @@ export type ContentMainDeps = {
 };
 
 export function createContentMain(deps: ContentMainDeps) {
-    return async function main(ctx: any) {
+    return async function main(ctx: ContentScriptContext) {
         const ui = await deps.createShadowRootUi(ctx, {
             name: 'ampoose-next-ui',
             position: 'inline',
@@ -29,7 +30,8 @@ export const contentScriptDefinition = {
     matches: ['https://www.facebook.com/*', 'https://web.facebook.com/*'],
     cssInjectionMode: 'ui',
     runAt: 'document_start',
+    world: 'ISOLATED',
     main: createContentMain({ createShadowRootUi, mountApp }),
-} as const;
+} satisfies Parameters<typeof defineContentScript>[0];
 
 export default defineContentScript(contentScriptDefinition);

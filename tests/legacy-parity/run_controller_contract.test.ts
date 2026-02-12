@@ -1,9 +1,9 @@
-import { expect, it, test } from 'bun:test';
+import { expect, it } from 'bun:test';
 import { buildGraphqlArtifact } from '../../src/domain/calibration/artifact';
 import { RunController } from '../../src/runtime/controller/runController';
 import { FETCH_MODE } from '../../src/runtime/settings/types';
 
-function createReadyArtifact() {
+const createReadyArtifact = () => {
     return buildGraphqlArtifact({
         CometSinglePostDialogContentQuery: {
             docId: '456',
@@ -18,18 +18,18 @@ function createReadyArtifact() {
             variables: { id: '100026362418520', scale: 2 },
         },
     });
-}
+};
 
-function createCalibrationClient() {
+const createCalibrationClient = () => {
     return {
         buildArtifact: async () => createReadyArtifact(),
         getStatus: async () => ({ active: false, captureCount: 0, missing: [] as string[] }),
         startCapture: async () => {},
         stopCapture: async () => {},
     };
-}
+};
 
-test('run controller blocks start when calibration missing', async () => {
+it('should block start when calibration missing', async () => {
     const controller = new RunController({
         calibrationClient: createCalibrationClient(),
         downloadClient: {
@@ -44,7 +44,7 @@ test('run controller blocks start when calibration missing', async () => {
     await expect(controller.start()).rejects.toThrow('DocId calibration required before export.');
 });
 
-test('run controller exports direct posts.json when no chunk output', async () => {
+it('should export direct posts.json when no chunk output', async () => {
     const downloads: Array<{ filename: string; data: string }> = [];
 
     const controller = new RunController({
@@ -85,7 +85,7 @@ test('run controller exports direct posts.json when no chunk output', async () =
     expect(payload.posts).toEqual([{ content: 'hello', id: 'p1' }]);
 });
 
-test('run controller emits chunk files and index in ALL mode', async () => {
+it('should emit chunk files and index in ALL mode', async () => {
     const downloads = new Map<string, string>();
 
     const controller = new RunController({
@@ -125,7 +125,7 @@ test('run controller emits chunk files and index in ALL mode', async () => {
     expect(indexPayload.folderNames).toEqual(['100026362418520']);
 });
 
-test('run controller logs capture diagnostics when calibration entries are missing', async () => {
+it('should log capture diagnostics when calibration entries are missing', async () => {
     const controller = new RunController({
         calibrationClient: {
             buildArtifact: async () => createReadyArtifact(),
@@ -163,7 +163,7 @@ test('run controller logs capture diagnostics when calibration entries are missi
     ).toBe(true);
 });
 
-test('run controller downloads logs file in collection folder', async () => {
+it('should download logs file in collection folder', async () => {
     const downloads: string[] = [];
     const controller = new RunController({
         calibrationClient: createCalibrationClient(),

@@ -70,14 +70,16 @@ export function normalizeLogPayload(payload: unknown): unknown {
 
 export class LogStore {
     private logs: LogEntry[] = [];
+    private nextId = 1;
 
     add(type: LogType, msg: string, payload?: unknown): LogEntry {
         const entry: LogEntry = {
-            id: Math.ceil(Math.random() * 9_999_999),
+            id: this.nextId,
             msg,
             payload: normalizeLogPayload(payload),
             type,
         };
+        this.nextId += 1;
         this.logs.push(entry);
         if (this.logs.length > LOG_STORE_LIMIT) {
             this.logs = this.logs.slice(-LOG_STORE_LIMIT);

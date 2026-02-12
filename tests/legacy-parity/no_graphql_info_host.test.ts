@@ -1,9 +1,9 @@
-import { expect, test } from 'bun:test';
+import { expect, it } from 'bun:test';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-function listFiles(root: string): string[] {
+const listFiles = (root: string) => {
     const entries = fs.readdirSync(root, { withFileTypes: true });
     const out: string[] = [];
     for (const entry of entries) {
@@ -17,11 +17,11 @@ function listFiles(root: string): string[] {
         }
     }
     return out;
-}
+};
 
-test('runtime source contains no graphql-info.ampoose.local references', () => {
+it('should not contain graphql-info.ampoose.local references in runtime source', () => {
     const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-    const files = listFiles(path.join(root, 'src')).concat(listFiles(path.join(root, 'src', 'entrypoints')));
+    const files = listFiles(path.join(root, 'src'));
 
     const offenders: string[] = [];
     for (const file of files) {

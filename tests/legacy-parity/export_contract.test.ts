@@ -1,7 +1,7 @@
-import { expect, test } from 'bun:test';
+import { expect, it } from 'bun:test';
 import { buildExportEnvelope, stringifyExportData } from '../../src/domain/export/envelope';
 
-test('export contract: envelope keys and post whitelist', () => {
+it('should match export contract envelope keys and post whitelist', () => {
     const input = [
         {
             attachments: [],

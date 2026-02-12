@@ -58,19 +58,14 @@ export function sanitizeExportPost(value: unknown): ExportPost | undefined {
         return undefined;
     }
     const id = resolvePostId(value);
-    if (!id) {
-        return undefined;
-    }
-    if (!isPlainObject(value)) {
-        return undefined;
-    }
+    const obj = value as Record<string, unknown>;
 
     const output: ExportPost = {
-        content: normalizePostContent(value.content),
+        content: normalizePostContent(obj.content),
         id,
     };
 
-    const createdAt = value.createdAt;
+    const createdAt = obj.createdAt;
     if (typeof createdAt === 'number' && Number.isFinite(createdAt)) {
         output.createdAt = createdAt;
     }

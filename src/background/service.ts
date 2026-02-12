@@ -46,6 +46,37 @@ function payloadToOptionalString(value: unknown): string | undefined {
     return typeof value === 'string' ? value : undefined;
 }
 
+const BLOB_URL_REVOKE_FALLBACK_MS = 30_000;
+
+function revokeObjectUrlForDownload(downloadId: number, url: string) {
+    let cleaned = false;
+    const cleanup = () => {
+        if (cleaned) {
+            return;
+        }
+        cleaned = true;
+        chrome.downloads.onChanged.removeListener(onChanged);
+        try {
+            URL.revokeObjectURL(url);
+        } catch {
+            // no-op
+        }
+    };
+
+    const onChanged = (change: chrome.downloads.DownloadDelta) => {
+        if (change.id !== downloadId) {
+            return;
+        }
+        const state = change.state?.current;
+        if (state === 'complete' || state === 'interrupted') {
+            cleanup();
+        }
+    };
+
+    chrome.downloads.onChanged.addListener(onChanged);
+    setTimeout(cleanup, BLOB_URL_REVOKE_FALLBACK_MS);
+}
+
 async function downloadTextAsFile(
     text: string,
     filename: string,
@@ -65,7 +96,11 @@ async function downloadTextAsFile(
                 saveAs: false,
                 url,
             });
-            URL.revokeObjectURL(url);
+            if (typeof id === 'number') {
+                revokeObjectUrlForDownload(id, url);
+            } else {
+                setTimeout(() => URL.revokeObjectURL(url), BLOB_URL_REVOKE_FALLBACK_MS);
+            }
             return { id, method: 'blob', ok: true };
         }
     } catch {
@@ -73,7 +108,12 @@ async function downloadTextAsFile(
     }
 
     try {
-        const base64 = btoa(unescape(encodeURIComponent(data)));
+        const bytes = new TextEncoder().encode(data);
+        let binary = '';
+        for (const byte of bytes) {
+            binary += String.fromCharCode(byte);
+        }
+        const base64 = btoa(binary);
         const url = `data:${mimeType};base64,${base64}`;
         const id = await chrome.downloads.download({
             conflictAction: 'uniquify',

@@ -8,9 +8,11 @@ export type GraphqlRequestInput = {
     responseMode?: 'single' | 'all';
 };
 
+export type GraphqlFetchImpl = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
 export type GraphqlClientDeps = {
     loadArtifact: () => Promise<GraphqlArtifactV1 | null>;
-    fetchImpl?: typeof fetch;
+    fetchImpl?: GraphqlFetchImpl;
 };
 
 function toPreview(value: string, max = 220): string {
@@ -99,7 +101,11 @@ function readInputValue(name: string): string {
         if (typeof document === 'undefined') {
             return '';
         }
-        const node = document.querySelector<HTMLInputElement>(`input[name='${name}']`);
+        const escapedName =
+            typeof CSS !== 'undefined' && typeof CSS.escape === 'function'
+                ? CSS.escape(name)
+                : name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const node = document.querySelector<HTMLInputElement>(`input[name='${escapedName}']`);
         return (node?.value ?? '').trim();
     } catch {
         return '';

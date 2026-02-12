@@ -63,6 +63,7 @@ export function flushPostsChunk(
     posts: ExportPost[],
     force: boolean,
 ): { state: ChunkState; parts: ChunkPart[]; remaining: ExportPost[] } {
+    // Intentionally mutates `state` so callers can keep passing the same object between flushes.
     let remaining = [...posts];
     const parts: ChunkPart[] = [];
 

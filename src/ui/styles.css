@@ -65,10 +65,10 @@
   --spacing-2xl: 24px;
 
   /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07);
-  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-  --shadow-xl: 0 18px 45px rgba(15, 23, 42, 0.22);
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 5%);
+  --shadow-md: 0 4px 6px rgb(0 0 0 / 7%);
+  --shadow-lg: 0 10px 15px rgb(0 0 0 / 10%);
+  --shadow-xl: 0 18px 45px rgb(15 23 42 / 22%);
 
   /* Border Radius */
   --radius-sm: 6px;
@@ -145,13 +145,13 @@ select {
   font-size: var(--font-size-base);
   font-weight: var(--font-weight-medium);
   font-family: var(--font-family-base);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
   transition: background-color 0.2s, box-shadow 0.2s;
 }
 
 .launcher-button:hover {
   background: var(--color-primary-hover);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 20%);
 }
 
 .launcher-button img {
@@ -166,7 +166,7 @@ select {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(15, 23, 42, 0.36);
+  background: rgb(15 23 42 / 36%);
   backdrop-filter: blur(2px);
 }
 
@@ -185,9 +185,9 @@ select {
   max-height: 90vh;
   overflow: hidden;
   background: var(--color-bg-primary);
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1), 0 2px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 0 rgb(0 0 0 / 10%), 0 2px 12px rgb(0 0 0 / 15%);
   font-family: var(--font-family-base);
 }
 
@@ -197,7 +197,7 @@ select {
   align-items: center;
   justify-content: space-between;
   padding: var(--spacing-lg) var(--spacing-lg);
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--color-border-light);
   background: var(--color-bg-primary);
 }
 
@@ -216,7 +216,7 @@ select {
   width: 36px;
   height: 36px;
   background: transparent;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   border-radius: 50%;
   color: var(--color-text-secondary);
   font-weight: var(--font-weight-normal);
@@ -262,7 +262,7 @@ select {
   height: 18px;
   padding: 0;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgb(255 255 255 / 30%);
   border: none;
   font-size: 12px;
   font-weight: normal;
@@ -272,7 +272,7 @@ select {
 }
 
 .pill-action-button:hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: rgb(255 255 255 / 50%);
 }
 
 .pill.pill-step {
@@ -329,7 +329,7 @@ select {
 /* Settings Panel */
 .settings-panel {
   background: #f0f2f5;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   display: grid;
   gap: 12px;
@@ -347,7 +347,7 @@ select {
 .settings-label select,
 .settings-label input[type="number"] {
   background: var(--color-bg-primary);
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   border-radius: 6px;
   font-family: var(--font-family-base);
   font-size: 13px;
@@ -361,7 +361,6 @@ select {
   background-position: right var(--spacing-md) center;
   background-repeat: no-repeat;
   padding-right: 34px;
-  -webkit-appearance: none;
 }
 
 .settings-label input[type="checkbox"] {
@@ -408,7 +407,7 @@ select {
 
 .button-secondary {
   background: #f0f2f5;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   color: var(--color-text-primary);
 }
 
@@ -424,7 +423,7 @@ select {
 /* Stats Display */
 .stats-display {
   background: #f0f2f5;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   color: #65676b;
   font-family: var(--font-family-mono);
@@ -437,7 +436,7 @@ select {
 /* Logs Panel */
 .logs-panel {
   background: #f0f2f5;
-  border: 1px solid #ccc;
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   color: #65676b;
   font-family: var(--font-family-mono);
@@ -448,7 +447,7 @@ select {
 
 .logs-header {
   background: #f0f2f5;
-  border-bottom: 1px solid #ccc;
+  border-bottom: 1px solid var(--color-border);
   color: #8a8d91;
   font-size: 11px;
   letter-spacing: 0.2px;
@@ -471,7 +470,6 @@ select {
   margin-bottom: 2px;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
-  word-break: break-word;
 }
 
 .logs-entry.error {

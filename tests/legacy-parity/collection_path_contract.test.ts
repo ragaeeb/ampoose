@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { expect, it } from 'bun:test';
 import { buildGraphqlArtifact } from '../../src/domain/calibration/artifact';
 import {
     buildCollectionRelativeFilename,
@@ -8,7 +8,7 @@ import {
     resolveCollectionFolderName,
 } from '../../src/runtime/controller/collectionPath';
 
-function createArtifactWithProfileId(id: string) {
+const createArtifactWithProfileId = (id: string) => {
     return buildGraphqlArtifact({
         ProfileCometTimelineFeedRefetchQuery: {
             docId: '123',
@@ -17,9 +17,9 @@ function createArtifactWithProfileId(id: string) {
             variables: { id },
         },
     });
-}
+};
 
-test('collection path prefers username from facebook.com/<username>', () => {
+it('should prefer username from facebook.com/<username>', () => {
     const artifact = createArtifactWithProfileId('100026362418520');
     const context = resolveCollectionContext({
         artifact,
@@ -31,7 +31,7 @@ test('collection path prefers username from facebook.com/<username>', () => {
     expect(context.folderNames).toEqual(['some.username']);
 });
 
-test('collection path falls back to profile id when username is unavailable', () => {
+it('should fall back to profile id when username is unavailable', () => {
     const artifact = createArtifactWithProfileId('100026362418520');
     const context = resolveCollectionContext({
         artifact,
@@ -42,7 +42,7 @@ test('collection path falls back to profile id when username is unavailable', ()
     expect(context.collectionId).toBe('100026362418520');
 });
 
-test('collection path uses URL id when artifact id is missing', () => {
+it('should use URL id when artifact id is missing', () => {
     const context = resolveCollectionContext({
         artifact: null,
         currentUrl: 'https://www.facebook.com/profile.php?id=1000123456789',
@@ -53,7 +53,7 @@ test('collection path uses URL id when artifact id is missing', () => {
     expect(extractProfileIdFromUrl('https://www.facebook.com/profile.php?id=1000123456789')).toBe('1000123456789');
 });
 
-test('collection helpers sanitize and namespace relative filenames', () => {
+it('should sanitize and namespace relative filenames', () => {
     expect(extractProfileUsername('https://www.facebook.com/permalink.php?story_fbid=1')).toBe('');
     expect(resolveCollectionFolderName(['some:user'], '')).toBe('some_user');
     expect(buildCollectionRelativeFilename('some:user', '../posts.json')).toBe('some_user/posts.json');

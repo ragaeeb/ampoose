@@ -14,7 +14,7 @@ export function extractProfileUrlFromPost(value: unknown): string {
     if (!isPlainObject(author)) {
         return '';
     }
-    return typeof author.profile === 'string' ? author.profile : '';
+    return typeof author.profile === 'string' && author.profile ? author.profile : '';
 }
 
 export function extractAuthorFromPost(value: unknown): Record<string, unknown> {

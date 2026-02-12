@@ -44,7 +44,7 @@ describe('calibration storage', () => {
         expect(artifact?.entries.ProfileCometTimelineFeedRefetchQuery?.docId).toBe('123');
     });
 
-    it('should save and clear the stored artifact', async () => {
+    it('should save the stored artifact', async () => {
         const sendMessage = mock(async () => true);
         (globalThis as any).chrome = {
             ...(originalChrome ?? {}),
@@ -67,6 +67,17 @@ describe('calibration storage', () => {
             action: 'setPersistLocalStorage',
             payload: [CALIBRATION_STORAGE_KEY, artifact],
         });
+    });
+
+    it('should clear the stored artifact', async () => {
+        const sendMessage = mock(async () => true);
+        (globalThis as any).chrome = {
+            ...(originalChrome ?? {}),
+            runtime: {
+                ...(originalChrome?.runtime ?? {}),
+                sendMessage,
+            },
+        };
 
         await clearCalibrationArtifact();
         expect(sendMessage).toHaveBeenCalledWith({
