@@ -31,7 +31,7 @@ describe('calibration capture (extra)', () => {
         const artifact = manager.buildArtifact();
         expect((artifact as any).entries.ProfileCometTimelineFeedRefetchQuery.docId).toBe('111');
         expect((artifact as any).entries.ProfileCometTimelineFeedRefetchQuery.variables.cursor).toBeUndefined();
-        expect((artifact as any).entries.ProfileCometTimelineFeedRefetchQuery.requestParams?.lsd).toBeUndefined();
+        expect((artifact as any).entries.ProfileCometTimelineFeedRefetchQuery.requestParams?.lsd).toBe('keep-this');
 
         restore();
     });
@@ -143,7 +143,7 @@ describe('calibration capture (extra)', () => {
         const artifact = manager.buildArtifact() as any;
         expect(artifact.entries.ProfileCometTimelineFeedRefetchQuery.docId).toBe('779');
         expect(artifact.entries.CometSinglePostDialogContentQuery.docId).toBe('780');
-        expect(artifact.entries.ProfileCometTimelineFeedRefetchQuery.requestParams).toEqual({ kept: '1' });
+        expect(artifact.entries.ProfileCometTimelineFeedRefetchQuery.requestParams).toEqual({ kept: '1', lsd: 'secret' });
         expect(artifact.entries.ProfileCometTimelineFeedRefetchQuery.variables).toEqual({});
         restore();
     });

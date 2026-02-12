@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'bun:test';
 import { buildGraphqlArtifact } from '@/domain/calibration/artifact';
 import { createGraphqlClient } from '@/domain/graphql/client';
+import { createCalibrationCaptureManager } from '@/runtime/calibration/capture';
 
 const originalLocationHref = window.location.href;
 
@@ -23,6 +24,49 @@ afterEach(() => {
 });
 
 describe('graphql client extra branches', () => {
+    it('should keep required calibration request params for fallback retries when ambient params are unavailable', async () => {
+        const originalQuerySelector = document.querySelector.bind(document);
+        const originalFetch = window.fetch;
+        (window as any).fetch = async () => new Response('{}', { status: 200 });
+        document.querySelector = (() => null) as typeof document.querySelector;
+        document.cookie = '';
+
+        const manager = createCalibrationCaptureManager();
+        manager.start();
+        await window.fetch('/api/graphql/', {
+            body: JSON.stringify({
+                doc_id: '123',
+                fb_api_req_friendly_name: 'ProfileCometTimelineFeedRefetchQuery',
+                lsd: 'LSD_REQUIRED',
+                variables: { id: '456' },
+            }),
+            method: 'POST',
+        });
+        const capturedArtifact = manager.buildArtifact();
+
+        const client = createGraphqlClient({
+            fetchImpl: (async (_input: RequestInfo | URL, init?: RequestInit) => {
+                const body = String(init?.body ?? '');
+                if (body.includes('lsd=LSD_REQUIRED')) {
+                    return new Response(JSON.stringify({ data: { ok: true } }), { status: 200 });
+                }
+                return new Response('', { status: 200 });
+            }) as unknown as typeof fetch,
+            loadArtifact: async () => capturedArtifact,
+        });
+
+        try {
+            const result = await client.request<{ data: { ok: boolean } }>({
+                endpoint: '/api/graphql/',
+                queryName: 'ProfileCometTimelineFeedRefetchQuery',
+            });
+            expect(result.data.ok).toBe(true);
+        } finally {
+            document.querySelector = originalQuerySelector;
+            (window as any).fetch = originalFetch;
+        }
+    });
+
     it('should fail NDJSON parsing when one line is invalid JSON', async () => {
         const client = createGraphqlClient({
             fetchImpl: (async () => new Response('{"data":{"ok":true}}\n{not-json}', { status: 200 })) as unknown as typeof fetch,
