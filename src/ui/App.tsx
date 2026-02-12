@@ -1,5 +1,5 @@
 import type { ReactNode, RefObject } from 'react';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import type { ControllerState } from '@/runtime/controller/types';
 import { FETCH_MODE, type FetchingCountType } from '@/runtime/settings/types';
 import './styles.css';
@@ -22,7 +22,9 @@ export type AppProps = {
 };
 
 function resolveLogoUrl(): string {
-    return typeof chrome !== 'undefined' && chrome.runtime?.getURL ? chrome.runtime.getURL('src/assets/logo/icon.svg') : '';
+    return typeof chrome !== 'undefined' && chrome.runtime?.getURL
+        ? chrome.runtime.getURL('src/assets/logo/icon.svg')
+        : '';
 }
 
 function getStepPillClass(step: ControllerState['step']): string {
@@ -150,12 +152,7 @@ function LauncherButton({ logoUrl, onOpen }: { logoUrl: string; onOpen: (open: b
 function ModalShell({ children, onClose }: { children: ReactNode; onClose: () => void }) {
     return (
         <div className="modal-overlay">
-            <button
-                type="button"
-                aria-label="Close dialog"
-                onClick={onClose}
-                className="modal-overlay-backdrop"
-            />
+            <button type="button" aria-label="Close dialog" onClick={onClose} className="modal-overlay-backdrop" />
             {children}
         </div>
     );
@@ -177,7 +174,11 @@ function ErrorBanner({ error }: { error: string }) {
 }
 
 function CalibrationBanner() {
-    return <div className="calibration-banner">Complete calibration first. Export controls are hidden until calibration is ready.</div>;
+    return (
+        <div className="calibration-banner">
+            Complete calibration first. Export controls are hidden until calibration is ready.
+        </div>
+    );
 }
 
 function SettingsPanel({
@@ -386,10 +387,6 @@ export function App({
     const calibrationPillClass = getCalibrationPillClass(state.calibrationStatus);
     const calibrationLabel = getCalibrationLabel(state.calibrationStatus);
 
-    const primaryText = useMemo(() => {
-        return getPrimaryText(state.step, state.isOnLimit);
-    }, [state.step, state.isOnLimit]);
-
     useEffect(() => {
         const node = logsViewportRef.current;
         if (!node) {
@@ -471,7 +468,7 @@ export function App({
                             {showExportControls && (
                                 <ExportControls
                                     state={state}
-                                    primaryText={primaryText}
+                                    primaryText={getPrimaryText(state.step, state.isOnLimit)}
                                     onPrimary={() => void handlePrimary()}
                                     onDownload={onDownload}
                                     onDownloadLogs={onDownloadLogs}
