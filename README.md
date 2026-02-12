@@ -1,4 +1,4 @@
-# Ampoose Next
+# Ampoose
 
 ![Ampoose Icon](icon.png)
 

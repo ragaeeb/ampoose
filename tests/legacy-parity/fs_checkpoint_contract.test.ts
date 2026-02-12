@@ -1,32 +1,32 @@
-import { expect, test } from "bun:test";
-import { buildFsSessionCheckpoint } from "../../src/domain/fs/checkpoint";
+import { expect, test } from 'bun:test';
+import { buildFsSessionCheckpoint } from '../../src/domain/fs/checkpoint';
 
-test("fs checkpoint contract", () => {
-  const checkpoint = buildFsSessionCheckpoint({
-    collectionId: "collection-1",
-    folderNames: ["folder-1"],
-    createdAt: "2026-02-11T00:00:00.000Z",
-    updatedAt: "2026-02-11T00:10:00.000Z",
-    profileUrl: "https://www.facebook.com/author",
-    author: { id: "a1", name: "Author" },
-    totalPosts: 120,
-    nextCursor: "cursor-123",
-    status: "running",
-    lastError: null
-  });
+test('fs checkpoint contract', () => {
+    const checkpoint = buildFsSessionCheckpoint({
+        author: { id: 'a1', name: 'Author' },
+        collectionId: 'collection-1',
+        createdAt: '2026-02-11T00:00:00.000Z',
+        folderNames: ['folder-1'],
+        lastError: null,
+        nextCursor: 'cursor-123',
+        profileUrl: 'https://www.facebook.com/author',
+        status: 'running',
+        totalPosts: 120,
+        updatedAt: '2026-02-11T00:10:00.000Z',
+    });
 
-  expect(checkpoint).toEqual({
-    format: "ampoose-fs-session-v1",
-    version: 1,
-    collectionId: "collection-1",
-    folderNames: ["folder-1"],
-    createdAt: "2026-02-11T00:00:00.000Z",
-    updatedAt: "2026-02-11T00:10:00.000Z",
-    profileUrl: "https://www.facebook.com/author",
-    author: { id: "a1", name: "Author" },
-    totalPosts: 120,
-    nextCursor: "cursor-123",
-    status: "running",
-    lastError: null
-  });
+    expect(checkpoint).toEqual({
+        author: { id: 'a1', name: 'Author' },
+        collectionId: 'collection-1',
+        createdAt: '2026-02-11T00:00:00.000Z',
+        folderNames: ['folder-1'],
+        format: 'ampoose-fs-session-v1',
+        lastError: null,
+        nextCursor: 'cursor-123',
+        profileUrl: 'https://www.facebook.com/author',
+        status: 'running',
+        totalPosts: 120,
+        updatedAt: '2026-02-11T00:10:00.000Z',
+        version: 1,
+    });
 });

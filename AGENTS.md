@@ -6,7 +6,8 @@ The runtime is Ampoose-owned and does not rely on upstream bundles.
 
 ## Read Order (Start Here)
 1. `README.md` — project overview, constraints, and usage.
-2. `docs/migration-status.md` — implementation status and validation notes.
+2. `docs/chrome-web-store-submission.md` — Chrome Web Store listing notes, single-purpose, permissions.
+3. `privacy-policy.md` — privacy policy for store submission (canonical).
 3. `src/runtime/controller/runController.ts` — active runtime orchestration.
 4. `tests/legacy-parity/*` — runtime and contract suite.
 
@@ -15,7 +16,7 @@ The runtime is Ampoose-owned and does not rely on upstream bundles.
 - `src/entrypoints/` — extension entrypoints.
   - `src/entrypoints/background.ts` — background/service worker.
   - `src/entrypoints/content.tsx` — content script UI mount.
-  - `src/entrypoints/main-world.ts` — main-world bridge/capture entry.
+  - `src/entrypoints/main-world.content.ts` — main-world (MAIN world) capture/bridge entry.
 - `src/ui/` — in-page React dialog and controls.
 - `src/runtime/` — runtime controller, bridge, calibration, logs, state.
 - `src/domain/` — pure typed domain modules (export/chunk/graphql/resume/checkpoint).

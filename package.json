@@ -1,45 +1,57 @@
 {
-  "name": "ampoose",
-  "version": "0.1.0",
-  "description": "Minimal Facebook posts exporter extension with JSON-only output.",
-  "private": true,
-  "license": "MIT",
-  "author": "ragaeeb",
-  "homepage": "https://github.com/ragaeeb/ampoose#readme",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ragaeeb/ampoose.git"
-  },
-  "bugs": {
-    "url": "https://github.com/ragaeeb/ampoose/issues"
-  },
-  "packageManager": "bun@1.3.9",
-  "engines": {
-    "node": ">=25",
-    "bun": ">=1.3.9"
-  },
-  "type": "module",
-  "scripts": {
-    "dev": "wxt",
-    "build": "wxt build",
-    "zip": "wxt zip",
-    "test": "bun test",
-    "test:coverage": "bun test --coverage",
-    "check": "tsc --noEmit"
-  },
-  "dependencies": {
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4"
-  },
-  "devDependencies": {
-    "@types/bun": "^1.3.9",
-    "@types/chrome": "^0.1.36",
-    "@types/node": "^25.2.3",
-    "@types/react": "^19.2.13",
-    "@types/react-dom": "^19.2.3",
-    "@wxt-dev/module-react": "^1.1.5",
-    "happy-dom": "^20.6.1",
-    "typescript": "^5.9.3",
-    "wxt": "^0.20.14"
-  }
+    "author": "ragaeeb",
+    "bugs": {
+        "url": "https://github.com/ragaeeb/ampoose/issues"
+    },
+    "dependencies": {
+        "react": "^19.2.4",
+        "react-dom": "^19.2.4"
+    },
+    "description": "Minimal Facebook posts exporter extension with JSON-only output.",
+    "devDependencies": {
+        "@biomejs/biome": "^2.3.15",
+        "@happy-dom/global-registrator": "^20.6.1",
+        "@testing-library/react": "^16.3.2",
+        "@testing-library/user-event": "^14.6.1",
+        "@types/bun": "^1.3.9",
+        "@types/chrome": "^0.1.36",
+        "@types/node": "^25.2.3",
+        "@types/react": "^19.2.14",
+        "@types/react-dom": "^19.2.3",
+        "@wxt-dev/module-react": "^1.1.5",
+        "happy-dom": "^20.6.1",
+        "semantic-release": "^25.0.3",
+        "typescript": "^5.9.3",
+        "wxt": "^0.20.16"
+    },
+    "engines": {
+        "bun": ">=1.3.9",
+        "node": ">=25"
+    },
+    "homepage": "https://github.com/ragaeeb/ampoose#readme",
+    "keywords": [
+        "facebook",
+        "export",
+        "extension",
+        "chrome"
+    ],
+    "license": "MIT",
+    "name": "ampoose",
+    "packageManager": "bun@1.3.9",
+    "private": true,
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/ragaeeb/ampoose.git"
+    },
+    "scripts": {
+        "build": "wxt build",
+        "check": "tsc --noEmit",
+        "dev": "wxt",
+        "format": "biome format --write .",
+        "test": "bun test",
+        "test:coverage": "bun test --coverage",
+        "zip": "wxt zip"
+    },
+    "type": "module",
+    "version": "1.0.0"
 }
