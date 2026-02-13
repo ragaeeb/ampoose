@@ -34,7 +34,11 @@ Removed permissions not needed for single-purpose scope:
 - `downloads.ui`
 - `declarativeNetRequest`
 - `externally_connectable`
-- explicit `host_permissions` manifest block
+
+Host access clarification for review:
+- Ampoose does not declare a separate `host_permissions` manifest block.
+- Required host access is granted by `content_scripts.matches` (`https://www.facebook.com/*`, `https://web.facebook.com/*`), which Chrome treats as host permissions.
+- This scope is intentionally limited to Facebook pages where the export UI and timeline query flow run.
 
 ## Remote Code Statement
 Ampoose does **not** execute remote-hosted code.
