@@ -283,9 +283,7 @@ function collectTimelineNodes(payload: unknown): unknown[] {
     }
 
     const single =
-        getByPath(payload, 'data.node.timeline_list_feed_units.edges[0].node') ??
-        getByPath(payload, 'data.node') ??
-        undefined;
+        getByPath(payload, 'data.node.timeline_list_feed_units.edges[0].node') ?? getByPath(payload, 'data.node');
     return single ? [single] : [];
 }
 
@@ -391,19 +389,14 @@ function extractGraphqlErrors(response: unknown): GraphqlError[] {
     return payloads.flatMap((payload) => extractErrorsFromPayload(payload));
 }
 
-export async function queryProfileTimelinePage(client: GraphqlRequester, input: QueryInput): Promise<TimelinePage> {
-    const requestInput: GraphqlRequestInput = input.cursor
-        ? {
-              queryName: TIMELINE_QUERY_NAME,
-              responseMode: 'all',
-              variables: { cursor: input.cursor },
-              ...(input.signal ? { signal: input.signal } : {}),
-          }
-        : {
-              queryName: TIMELINE_QUERY_NAME,
-              responseMode: 'all',
-              ...(input.signal ? { signal: input.signal } : {}),
-          };
+export async function queryProfileTimelinePage(client: GraphqlRequester, input: QueryInput) {
+    const requestInput: GraphqlRequestInput = {
+        queryName: TIMELINE_QUERY_NAME,
+        responseMode: 'all',
+        ...(input.cursor ? { variables: { cursor: input.cursor } } : {}),
+        ...(input.signal ? { signal: input.signal } : {}),
+    };
+
     const response = await client.request(requestInput);
     const page = extractTimelinePageFromResponse(response);
     if (page.posts.length === 0 && !page.nextCursor) {

@@ -9,6 +9,7 @@ describe('graphql client ambient params', () => {
         delete (window as unknown as Record<string, unknown>).__spin_b;
         delete (window as unknown as Record<string, unknown>).__spin_r;
         delete (window as unknown as Record<string, unknown>).__spin_t;
+        delete (window as unknown as Record<string, unknown>).devicePixelRatio;
     });
 
     it('should include ambient params from cookies, inputs, and window spin values', async () => {
@@ -60,6 +61,6 @@ describe('graphql client ambient params', () => {
         });
 
         const response = await client.request({ queryName: 'ProfileCometTimelineFeedRefetchQuery' });
-        expect((response as any).data.ok).toBe(true);
+        expect((response as any).data.ok).toBeTrue();
     });
 });

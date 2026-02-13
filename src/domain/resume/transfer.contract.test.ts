@@ -54,4 +54,14 @@ it('should reject malformed imported payload shapes', () => {
             version: 1,
         }),
     ).toBeNull();
+
+    expect(
+        normalizeImportedResumePayload({
+            collectionId: 'c1',
+            exportedAt: 1,
+            format: 'ampoose-resume-cursors-v1',
+            resumeCursors: null,
+            version: 1,
+        }),
+    ).toBeNull();
 });

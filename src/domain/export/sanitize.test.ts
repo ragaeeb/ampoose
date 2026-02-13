@@ -10,29 +10,29 @@ describe('export sanitize', () => {
     });
 
     it('should detect attachments on multiple known fields', () => {
-        expect(hasPostAttachments({ attachments: [{}] })).toBe(true);
-        expect(hasPostAttachments({ _attachments: [{}] })).toBe(true);
-        expect(hasPostAttachments({ attachmentsDetails: [{}] })).toBe(true);
-        expect(hasPostAttachments({ attachedStoryAttachments: [{}] })).toBe(true);
-        expect(hasPostAttachments({ attached_story: { any: 1 } })).toBe(true);
-        expect(hasPostAttachments({ _attachedStoryOriginal: { any: 1 } })).toBe(true);
-        expect(hasPostAttachments({ attachedStory: { any: 1 } })).toBe(true);
-        expect(hasPostAttachments({})).toBe(false);
+        expect(hasPostAttachments({ attachments: [{}] })).toBeTrue();
+        expect(hasPostAttachments({ _attachments: [{}] })).toBeTrue();
+        expect(hasPostAttachments({ attachmentsDetails: [{}] })).toBeTrue();
+        expect(hasPostAttachments({ attachedStoryAttachments: [{}] })).toBeTrue();
+        expect(hasPostAttachments({ attached_story: { any: 1 } })).toBeTrue();
+        expect(hasPostAttachments({ _attachedStoryOriginal: { any: 1 } })).toBeTrue();
+        expect(hasPostAttachments({ attachedStory: { any: 1 } })).toBeTrue();
+        expect(hasPostAttachments({})).toBeFalse();
     });
 
     it('should filter out posts without id/content and keep text posts even with attachments', () => {
-        expect(shouldExportPost({ post_id: '1', content: '' })).toBe(false);
-        expect(shouldExportPost({ post_id: '1', content: 'hi', attachments: [{}] })).toBe(true);
-        expect(shouldExportPost({ post_id: '1', content: 'hi' })).toBe(true);
+        expect(shouldExportPost({ content: '', post_id: '1' })).toBeFalse();
+        expect(shouldExportPost({ attachments: [{}], content: 'hi', post_id: '1' })).toBeTrue();
+        expect(shouldExportPost({ content: 'hi', post_id: '1' })).toBeTrue();
     });
 
     it('should build an export post with optional createdAt', () => {
-        expect(sanitizeExportPost({ post_id: '1', content: ' hello ' })).toEqual({ content: 'hello', id: '1' });
-        expect(sanitizeExportPost({ post_id: '2', content: 'kept', attachments: [{ id: 'a1' }] })).toEqual({
+        expect(sanitizeExportPost({ content: ' hello ', post_id: '1' })).toEqual({ content: 'hello', id: '1' });
+        expect(sanitizeExportPost({ attachments: [{ id: 'a1' }], content: 'kept', post_id: '2' })).toEqual({
             content: 'kept',
             id: '2',
         });
-        expect(sanitizeExportPost({ post_id: '1', content: 'hello', createdAt: 123 })).toEqual({
+        expect(sanitizeExportPost({ content: 'hello', createdAt: 123, post_id: '1' })).toEqual({
             content: 'hello',
             createdAt: 123,
             id: '1',

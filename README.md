@@ -40,7 +40,7 @@ Private WXT + React successor for Ampoose.
 
 ## Project Layout
 
-```
+```text
 ampoose/
 ├── src/
 │   ├── entrypoints/

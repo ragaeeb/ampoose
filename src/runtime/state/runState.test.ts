@@ -14,9 +14,8 @@ describe('runState', () => {
     });
 
     it('should mark DONE as a terminal step', () => {
-        expect(isTerminalStep('DONE')).toBe(true);
-        expect(isTerminalStep('START')).toBe(false);
-        expect(isTerminalStep('DOWNLOADING')).toBe(false);
+        expect(isTerminalStep('DONE')).toBeTrue();
+        expect(isTerminalStep('START')).toBeFalse();
+        expect(isTerminalStep('DOWNLOADING')).toBeFalse();
     });
 });
-

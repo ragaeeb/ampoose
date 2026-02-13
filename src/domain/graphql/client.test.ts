@@ -60,7 +60,7 @@ describe('graphql client extra branches', () => {
                 endpoint: '/api/graphql/',
                 queryName: 'ProfileCometTimelineFeedRefetchQuery',
             });
-            expect(result.data.ok).toBe(true);
+            expect(result.data.ok).toBeTrue();
         } finally {
             document.querySelector = originalQuerySelector;
             (window as any).fetch = originalFetch;
@@ -69,7 +69,8 @@ describe('graphql client extra branches', () => {
 
     it('should fail NDJSON parsing when one line is invalid JSON', async () => {
         const client = createGraphqlClient({
-            fetchImpl: (async () => new Response('{"data":{"ok":true}}\n{not-json}', { status: 200 })) as unknown as typeof fetch,
+            fetchImpl: (async () =>
+                new Response('{"data":{"ok":true}}\n{not-json}', { status: 200 })) as unknown as typeof fetch,
             loadArtifact: async () => artifact,
         });
 
@@ -101,7 +102,7 @@ describe('graphql client extra branches', () => {
             queryName: 'ProfileCometTimelineFeedRefetchQuery',
         });
 
-        expect(result.data.ok).toBe(true);
+        expect(result.data.ok).toBeTrue();
         expect(urls[0]).toBe('/api/graphql/');
     });
 
@@ -110,14 +111,15 @@ describe('graphql client extra branches', () => {
         try {
             delete (globalThis as any).document;
             const client = createGraphqlClient({
-                fetchImpl: (async () => new Response(JSON.stringify({ data: { ok: true } }), { status: 200 })) as unknown as typeof fetch,
+                fetchImpl: (async () =>
+                    new Response(JSON.stringify({ data: { ok: true } }), { status: 200 })) as unknown as typeof fetch,
                 loadArtifact: async () => artifact,
             });
             const result = await client.request<{ data: { ok: boolean } }>({
                 endpoint: '/api/graphql/',
                 queryName: 'ProfileCometTimelineFeedRefetchQuery',
             });
-            expect(result.data.ok).toBe(true);
+            expect(result.data.ok).toBeTrue();
         } finally {
             (globalThis as any).document = originalDocument;
         }
@@ -126,7 +128,7 @@ describe('graphql client extra branches', () => {
     it("parses responses prefixed with )]}' and picks payload containing errors", async () => {
         const client = createGraphqlClient({
             fetchImpl: (async () =>
-                new Response(")]}'\n{\"meta\":1}\n{\"errors\":[{\"message\":\"fail\"}]}", {
+                new Response(')]}\'\n{"meta":1}\n{"errors":[{"message":"fail"}]}', {
                     status: 200,
                 })) as unknown as typeof fetch,
             loadArtifact: async () => artifact,
@@ -207,7 +209,7 @@ describe('graphql client extra branches', () => {
                 queryName: 'ProfileCometTimelineFeedRefetchQuery',
             });
 
-            expect(result.data.ok).toBe(true);
+            expect(result.data.ok).toBeTrue();
             const params = calls[0]!;
             expect(params.get('__user')).toBeNull();
             expect(params.get('av')).toBeNull();
@@ -239,8 +241,8 @@ describe('graphql client extra branches', () => {
             queryName: 'ProfileCometTimelineFeedRefetchQuery',
         });
 
-        expect(result.data.ok).toBe(true);
-        expect(urls.includes('https://www.facebook.com/api/graphql/')).toBe(true);
-        expect(urls.includes('https://www.facebook.com/graphql/query/')).toBe(true);
+        expect(result.data.ok).toBeTrue();
+        expect(urls.includes('https://www.facebook.com/api/graphql/')).toBeTrue();
+        expect(urls.includes('https://www.facebook.com/graphql/query/')).toBeTrue();
     });
 });

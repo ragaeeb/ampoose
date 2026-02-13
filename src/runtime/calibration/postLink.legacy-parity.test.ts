@@ -1,11 +1,15 @@
 import { expect, it } from 'bun:test';
 import { Window } from 'happy-dom';
-import { findFirstPostPermalinkLink, isLikelyPostPermalink, preparePostLinkForOpen } from '@/runtime/calibration/postLink';
+import {
+    findFirstPostPermalinkLink,
+    isLikelyPostPermalink,
+    preparePostLinkForOpen,
+} from '@/runtime/calibration/postLink';
 
 it('should ignore profile tab links and keep concrete post links', () => {
-    expect(isLikelyPostPermalink('/some.profile/posts')).toBe(false);
-    expect(isLikelyPostPermalink('/some.profile/posts/pfbid12345')).toBe(true);
-    expect(isLikelyPostPermalink('/permalink.php?story_fbid=123&id=456')).toBe(true);
+    expect(isLikelyPostPermalink('/some.profile/posts')).toBeFalse();
+    expect(isLikelyPostPermalink('/some.profile/posts/pfbid12345')).toBeTrue();
+    expect(isLikelyPostPermalink('/permalink.php?story_fbid=123&id=456')).toBeTrue();
 });
 
 it('should prefer feed-article permalinks', () => {
@@ -33,10 +37,10 @@ it('should prefer feed-article permalinks', () => {
 });
 
 it('should handle invalid urls and permalink fallback variants', () => {
-    expect(isLikelyPostPermalink('::not-a-url::', '::bad-base::')).toBe(false);
-    expect(isLikelyPostPermalink('/permalink.php?fbid=123')).toBe(true);
-    expect(isLikelyPostPermalink('/permalink.php')).toBe(false);
-    expect(isLikelyPostPermalink('/some.profile/photos')).toBe(false);
+    expect(isLikelyPostPermalink('::not-a-url::', '::bad-base::')).toBeFalse();
+    expect(isLikelyPostPermalink('/permalink.php?fbid=123')).toBeTrue();
+    expect(isLikelyPostPermalink('/permalink.php')).toBeFalse();
+    expect(isLikelyPostPermalink('/some.profile/photos')).toBeFalse();
 });
 
 it('should return null when no permalink candidates exist and keep non-blank targets unchanged', () => {
@@ -52,7 +56,11 @@ it('should return null when no permalink candidates exist and keep non-blank tar
         const selected = findFirstPostPermalinkLink(windowObj.document.body);
         expect(selected).toBeNull();
 
-        const link = windowObj.document.createElement('a');
+        const blankLink = windowObj.document.createElement('a') as any;
+        blankLink.setAttribute('target', '_blank');
+        preparePostLinkForOpen(blankLink);
+        expect(blankLink.getAttribute('target')).toBe('_self');
+        const link = windowObj.document.createElement('a') as any;
         link.setAttribute('target', '_self');
         preparePostLinkForOpen(link);
         expect(link.getAttribute('target')).toBe('_self');

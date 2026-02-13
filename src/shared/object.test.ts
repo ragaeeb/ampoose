@@ -3,17 +3,17 @@ import { isPlainObject, pruneExportValue } from '@/shared/object';
 
 describe('isPlainObject', () => {
     it('should detect plain objects', () => {
-        expect(isPlainObject({})).toBe(true);
-        expect(isPlainObject(Object.create(null))).toBe(true);
-        expect(isPlainObject([])).toBe(false);
-        expect(isPlainObject(new Date())).toBe(false);
-        expect(isPlainObject(null)).toBe(false);
+        expect(isPlainObject({})).toBeTrue();
+        expect(isPlainObject(Object.create(null))).toBeTrue();
+        expect(isPlainObject([])).toBeFalse();
+        expect(isPlainObject(new Date())).toBeFalse();
+        expect(isPlainObject(null)).toBeFalse();
     });
 });
 
 describe('pruneExportValue', () => {
     it('should drop removed keys and prune empty objects', () => {
-        const value = { keep: 1, drop: 2 };
+        const value = { drop: 2, keep: 1 };
         const pruned = pruneExportValue(value, { drop: true });
         expect(pruned).toEqual({ keep: 1 });
 

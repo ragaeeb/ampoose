@@ -10,7 +10,7 @@ it('should stop after 5 full-duplicate pages', () => {
             dedupedCount: 10,
             fetchedCount: 10,
         });
-        expect(next.shouldStop).toBe(false);
+        expect(next.shouldStop).toBeFalse();
         expect(next.streak).toBe(i);
     }
 
@@ -20,7 +20,7 @@ it('should stop after 5 full-duplicate pages', () => {
         fetchedCount: 10,
     });
 
-    expect(stop.shouldStop).toBe(true);
+    expect(stop.shouldStop).toBeTrue();
     expect(stop.streak).toBe(5);
 
     const reset = guard.evaluate({
@@ -29,7 +29,7 @@ it('should stop after 5 full-duplicate pages', () => {
         fetchedCount: 8,
     });
     expect(reset.streak).toBe(0);
-    expect(reset.shouldStop).toBe(false);
+    expect(reset.shouldStop).toBeFalse();
 });
 
 it('should reset streak when reset() is called', () => {
@@ -53,5 +53,5 @@ it('should reset streak when reset() is called', () => {
         fetchedCount: 3,
     });
     expect(next.streak).toBe(1);
-    expect(next.shouldStop).toBe(false);
+    expect(next.shouldStop).toBeFalse();
 });

@@ -36,5 +36,5 @@ it('should match export contract envelope keys and post whitelist', () => {
     ]);
 
     const pretty = stringifyExportData(envelope);
-    expect(pretty.includes('\n  "posts": [\n')).toBe(true);
+    expect(pretty.includes('\n  "posts": [\n')).toBeTrue();
 });

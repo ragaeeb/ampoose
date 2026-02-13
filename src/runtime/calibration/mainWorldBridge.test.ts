@@ -46,10 +46,10 @@ describe('mainWorldBridge', () => {
         };
         window.addEventListener('message', onMessage);
 
-        window.postMessage({ __ampooseCalibrationReq: true, id: '1', action: 'status' }, '*');
-        window.postMessage({ __ampooseCalibrationReq: true, id: '2', action: 'start' }, '*');
-        window.postMessage({ __ampooseCalibrationReq: true, id: '3', action: 'stop' }, '*');
-        window.postMessage({ __ampooseCalibrationReq: true, id: '4', action: 'buildArtifact' }, '*');
+        window.postMessage({ __ampooseCalibrationReq: true, action: 'status', id: '1' }, '*');
+        window.postMessage({ __ampooseCalibrationReq: true, action: 'start', id: '2' }, '*');
+        window.postMessage({ __ampooseCalibrationReq: true, action: 'stop', id: '3' }, '*');
+        window.postMessage({ __ampooseCalibrationReq: true, action: 'buildArtifact', id: '4' }, '*');
 
         expect(responses.find((r) => r.id === '1')?.result?.captureCount).toBe(3);
         expect(manager.start).toHaveBeenCalledTimes(1);
@@ -85,10 +85,10 @@ describe('mainWorldBridge', () => {
                 }
             };
             window.addEventListener('message', onMessage);
-            window.postMessage({ __ampooseCalibrationReq: true, id: 'x', action: 'nope' }, '*');
+            window.postMessage({ __ampooseCalibrationReq: true, action: 'nope', id: 'x' }, '*');
         });
 
-        expect(resp.ok).toBe(false);
+        expect(resp.ok).toBeFalse();
         expect(resp.error).toMatch(/unknown action/i);
         uninstall();
     });
@@ -124,9 +124,9 @@ describe('mainWorldBridge', () => {
             window.postMessage(
                 {
                     __ampooseCalibrationReq: true,
-                    id: 'g',
                     action: 'graphqlFetch',
-                    payload: { endpoint: '/api/graphql/', method: 'POST', body: 'a=1', headers: { a: 'b' } },
+                    id: 'g',
+                    payload: { body: 'a=1', endpoint: '/api/graphql/', headers: { a: 'b' }, method: 'POST' },
                 },
                 '*',
             );
@@ -168,15 +168,15 @@ describe('mainWorldBridge', () => {
             window.postMessage(
                 {
                     __ampooseCalibrationReq: true,
-                    id: 'bad',
                     action: 'graphqlFetch',
+                    id: 'bad',
                     payload: { endpoint: 'https://evil.example/graphql', method: 'POST' },
                 },
                 '*',
             );
         });
 
-        expect(resp.ok).toBe(false);
+        expect(resp.ok).toBeFalse();
         expect(resp.error).toMatch(/disallowed/i);
         uninstall();
     });
@@ -205,9 +205,12 @@ describe('mainWorldBridge', () => {
                 }
             };
             window.addEventListener('message', onMessage);
-            window.postMessage({ __ampooseCalibrationReq: true, id: 'inv', action: 'graphqlFetch', payload: null }, '*');
+            window.postMessage(
+                { __ampooseCalibrationReq: true, action: 'graphqlFetch', id: 'inv', payload: null },
+                '*',
+            );
         });
-        expect(invalidPayloadResp.ok).toBe(false);
+        expect(invalidPayloadResp.ok).toBeFalse();
         expect(invalidPayloadResp.error).toMatch(/invalid graphqlfetch payload/i);
 
         const methodResp = await new Promise<any>((resolve) => {
@@ -224,14 +227,14 @@ describe('mainWorldBridge', () => {
             window.postMessage(
                 {
                     __ampooseCalibrationReq: true,
-                    id: 'method',
                     action: 'graphqlFetch',
+                    id: 'method',
                     payload: { endpoint: '/api/graphql/', method: 'GET' },
                 },
                 '*',
             );
         });
-        expect(methodResp.ok).toBe(false);
+        expect(methodResp.ok).toBeFalse();
         expect(methodResp.error).toMatch(/unsupported graphql fetch method/i);
         uninstall();
     });
@@ -252,7 +255,9 @@ describe('mainWorldBridge', () => {
 
         const uninstall = installMainWorldCalibrationBridge(manager);
 
-        window.dispatchEvent(new MessageEvent('message', { data: { __ampooseCalibrationReq: true, id: 'x', action: 'start' } }));
+        window.dispatchEvent(
+            new MessageEvent('message', { data: { __ampooseCalibrationReq: true, action: 'start', id: 'x' } }),
+        );
         expect(manager.start).toHaveBeenCalledTimes(0);
 
         await new Promise<void>((resolve) => {
@@ -269,12 +274,12 @@ describe('mainWorldBridge', () => {
             window.postMessage(
                 {
                     __ampooseCalibrationReq: true,
-                    id: 'hdr',
                     action: 'graphqlFetch',
+                    id: 'hdr',
                     payload: {
                         endpoint: '/api/graphql/',
-                        method: 'POST',
                         headers: { '': 'bad', a: 'ok', b: 2 } as any,
+                        method: 'POST',
                     },
                 },
                 '*',
@@ -317,8 +322,8 @@ describe('mainWorldBridge', () => {
             window.postMessage(
                 {
                     __ampooseCalibrationReq: true,
-                    id: 'no-headers',
                     action: 'graphqlFetch',
+                    id: 'no-headers',
                     payload: { endpoint: '/api/graphql/', method: 'POST' },
                 },
                 '*',
@@ -374,7 +379,10 @@ describe('mainWorldBridge', () => {
                 return;
             }
             window.postMessage('bad-response', '*');
-            window.postMessage({ __ampooseCalibrationResp: true, id: `${data.id}-other`, ok: true, result: { ok: 2 } }, '*');
+            window.postMessage(
+                { __ampooseCalibrationResp: true, id: `${data.id}-other`, ok: true, result: { ok: 2 } },
+                '*',
+            );
             window.postMessage({ __ampooseCalibrationResp: true, id: data.id, ok: false }, '*');
         };
         window.addEventListener('message', onReq);

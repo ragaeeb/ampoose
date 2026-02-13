@@ -5,7 +5,7 @@ describe('content entrypoint', () => {
     it('should create shadow-root UI and auto mount with mount callback', async () => {
         const autoMount = mock(() => {});
         const mountApp = mock((_container: HTMLElement) => mock(() => {}));
-        let capturedOptions: Record<string, unknown> | null = null;
+        let capturedOptions: Record<string, unknown> = {};
 
         const createShadowRootUi = mock(async (_ctx: unknown, options: Record<string, unknown>) => {
             capturedOptions = options;
@@ -22,7 +22,7 @@ describe('content entrypoint', () => {
 
         expect(createShadowRootUi).toHaveBeenCalledTimes(1);
         expect(autoMount).toHaveBeenCalledTimes(1);
-        expect(capturedOptions?.name).toBe('ampoose-next-ui');
+        expect(capturedOptions?.name).toBe('ampoose-ui');
         expect(capturedOptions?.position).toBe('inline');
         expect(capturedOptions?.anchor).toBe('body');
         expect(capturedOptions?.append).toBe('last');

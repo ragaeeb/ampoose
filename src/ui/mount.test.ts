@@ -31,16 +31,16 @@ describe('mountApp', () => {
         const createGraphqlClient = mock((deps: any) => {
             return {
                 request: async () => {
-                await deps.fetchImpl('/api/graphql/', {
-                    body: 'a=1&b=2',
-                    headers: { z: '1' },
-                    method: 'POST',
-                });
+                    await deps.fetchImpl('/api/graphql/', {
+                        body: 'a=1&b=2',
+                        headers: { z: '1' },
+                        method: 'POST',
+                    });
 
-                await deps.fetchImpl('/api/graphql/', {
-                    body: new URLSearchParams({ a: '1' }),
-                    headers: new Headers({ a: 'b' }),
-                    method: 'POST',
+                    await deps.fetchImpl('/api/graphql/', {
+                        body: new URLSearchParams({ a: '1' }),
+                        headers: new Headers({ a: 'b' }),
+                        method: 'POST',
                     });
 
                     const form = new FormData();
@@ -51,17 +51,17 @@ describe('mountApp', () => {
                         method: 'post',
                     });
 
-                await deps.fetchImpl('/api/graphql/', {
-                    body: new Blob(['hi'], { type: 'text/plain' }),
-                    headers: { y: 2 },
-                    method: 'POST',
-                });
+                    await deps.fetchImpl('/api/graphql/', {
+                        body: new Blob(['hi'], { type: 'text/plain' }),
+                        headers: { y: 2 },
+                        method: 'POST',
+                    });
 
-                await deps.fetchImpl('/api/graphql/', {
-                    body: { k: 1 } as any,
-                    headers: { y: 2 },
-                    method: 'POST',
-                });
+                    await deps.fetchImpl('/api/graphql/', {
+                        body: { k: 1 } as any,
+                        headers: { y: 2 },
+                        method: 'POST',
+                    });
 
                     const fetchAbort = new AbortController();
                     await deps.fetchImpl('/api/graphql/', {
@@ -121,8 +121,7 @@ describe('mountApp', () => {
 
             subscribe(cb: () => void) {
                 cb();
-                return () => {
-                };
+                return () => {};
             }
 
             getState() {
@@ -213,11 +212,11 @@ describe('mountApp', () => {
 
         const mountApp = createMountApp({
             App,
-            RunController: FakeRunController as any,
             createGraphqlClient: createGraphqlClient as any,
             createRoot: createRoot as any,
             loadCalibrationArtifact: loadCalibrationArtifact as any,
             queryProfileTimelinePage: queryProfileTimelinePage as any,
+            RunController: FakeRunController as any,
             requestCalibrationAction: requestCalibrationAction as any,
             saveCalibrationArtifact: saveCalibrationArtifact as any,
             sendRuntimeMessage: sendRuntimeMessage as any,
@@ -248,18 +247,28 @@ describe('mountApp', () => {
         expect(createGraphqlClient).toHaveBeenCalledTimes(1);
         expect(queryProfileTimelinePage).toHaveBeenCalledTimes(1);
         expect(requestCalibrationAction).toHaveBeenCalled();
-        expect(sendRuntimeMessage).toHaveBeenCalledWith('downloadTextAsFile', ['x', 'posts.json', 'application/json', false]);
-        expect(sendRuntimeMessage).toHaveBeenCalledWith(
-            'downloadTextAsFile',
-            ['x', 'posts-redacted.json', 'application/json', false],
-        );
-        expect(sendRuntimeMessage).toHaveBeenCalledWith('downloadTextAsFile', ['x', 'logs.json', 'application/json', false]);
+        expect(sendRuntimeMessage).toHaveBeenCalledWith('downloadTextAsFile', [
+            'x',
+            'posts.json',
+            'application/json',
+            false,
+        ]);
+        expect(sendRuntimeMessage).toHaveBeenCalledWith('downloadTextAsFile', [
+            'x',
+            'posts-redacted.json',
+            'application/json',
+            false,
+        ]);
+        expect(sendRuntimeMessage).toHaveBeenCalledWith('downloadTextAsFile', [
+            'x',
+            'logs.json',
+            'application/json',
+            false,
+        ]);
         expect(controllerCalls).toContain('probeEarliestAccessiblePost');
         expect(controllerCalls).toContain('stopProbe');
         expect(lastQueryInput?.signal).toBeInstanceOf(AbortSignal);
-        expect(
-            requestCalibrationAction.mock.calls.some((call) => call[3] instanceof AbortSignal),
-        ).toBe(true);
+        expect(requestCalibrationAction.mock.calls.some((call) => call[3] instanceof AbortSignal)).toBeTrue();
 
         unmount();
         expect(controllerCalls).toContain('stopCalibrationCapture');

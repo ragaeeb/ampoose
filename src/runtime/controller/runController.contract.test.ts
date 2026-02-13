@@ -114,9 +114,9 @@ it('should emit chunk files and index in ALL mode', async () => {
     await controller.start();
     await controller.downloadJson();
 
-    expect(downloads.has('100026362418520/posts-run-000001-part-0001.json')).toBe(true);
-    expect(downloads.has('100026362418520/posts-run-000001-part-0002.json')).toBe(true);
-    expect(downloads.has('100026362418520/posts-run-000001-index.json')).toBe(true);
+    expect(downloads.has('100026362418520/posts-run-000001-part-0001.json')).toBeTrue();
+    expect(downloads.has('100026362418520/posts-run-000001-part-0002.json')).toBeTrue();
+    expect(downloads.has('100026362418520/posts-run-000001-index.json')).toBeTrue();
     const indexPayload = JSON.parse(downloads.get('100026362418520/posts-run-000001-index.json') ?? '{}') as {
         collectionId: string;
         folderNames: string[];
@@ -160,7 +160,7 @@ it('should log capture diagnostics when calibration entries are missing', async 
                 msg.includes('captured=ProfileCometTimelineFeedRefetchQuery') &&
                 msg.includes('count=1'),
         ),
-    ).toBe(true);
+    ).toBeTrue();
 });
 
 it('should download logs file in collection folder', async () => {
@@ -184,8 +184,8 @@ it('should download logs file in collection folder', async () => {
     await controller.downloadLogsJson();
 
     expect(downloads.length).toBe(1);
-    expect(downloads[0]!.startsWith('some.username/logs-')).toBe(true);
-    expect(downloads[0]!.endsWith('.json')).toBe(true);
+    expect(downloads[0]!.startsWith('some.username/logs-')).toBeTrue();
+    expect(downloads[0]!.endsWith('.json')).toBeTrue();
 });
 
 it('should filter posts by date in BY_DAYS_COUNT mode and stop when boundary is reached', async () => {
@@ -232,6 +232,37 @@ it('should filter posts by date in BY_DAYS_COUNT mode and stop when boundary is 
     const postIds = controller.getState().posts.map((post) => String(post.post_id ?? ''));
     expect(postIds).toEqual(['recent']);
     expect(queryCalls).toBe(1);
+});
+
+it('should set isOnLimit when post-count limit is reached so continue can resume', async () => {
+    const controller = new RunController({
+        calibrationClient: createCalibrationClient(),
+        downloadClient: {
+            downloadTextAsFile: async () => ({ ok: true }),
+        },
+        getCurrentUrl: () => 'https://www.facebook.com/some.username',
+        loadCalibration: async () => createReadyArtifact(),
+        queryPage: async () => ({
+            nextCursor: 'next-cursor',
+            posts: [
+                { content: 'p1', post_id: 'p1' },
+                { content: 'p2', post_id: 'p2' },
+                { content: 'p3', post_id: 'p3' },
+            ],
+        }),
+        saveCalibration: async () => {},
+    });
+
+    controller.updateSettings({
+        fetchingCountByPostCountValue: 2,
+        fetchingCountType: FETCH_MODE.BY_POST_COUNT,
+    });
+    await controller.start();
+
+    const state = controller.getState();
+    expect(state.isOnLimit).toBeTrue();
+    expect(state.progress.totalPosts).toBe(2);
+    expect(state.progress.nextCursor).toBe('next-cursor');
 });
 
 it('should dedupe posts across chunk boundaries in ALL mode', async () => {
@@ -282,5 +313,42 @@ it('should dedupe posts across chunk boundaries in ALL mode', async () => {
     expect(part2.length).toBe(250);
 
     const ids = new Set(part1.map((post) => post.id));
-    expect(part2.some((post) => ids.has(post.id))).toBe(false);
+    expect(part2.some((post) => ids.has(post.id))).toBeFalse();
+});
+
+it('should auto-pack chunked ALL runs into posts.json on completion', async () => {
+    const downloads = new Map<string, string>();
+
+    const controller = new RunController({
+        calibrationClient: createCalibrationClient(),
+        downloadClient: {
+            downloadTextAsFile: async (data, filename) => {
+                downloads.set(filename, data);
+                return { ok: true };
+            },
+        },
+        getCurrentUrl: () => 'https://www.facebook.com/permalink.php?story_fbid=1',
+        loadCalibration: async () => createReadyArtifact(),
+        queryPage: async () => ({
+            nextCursor: null,
+            posts: Array.from({ length: 550 }).map((_, i) => ({
+                content: `post ${i}`,
+                post_id: `p-${i}`,
+            })),
+        }),
+        saveCalibration: async () => {},
+    });
+
+    controller.updateSettings({ fetchingCountType: FETCH_MODE.ALL, isUsePostsFilter: false });
+    await controller.start();
+
+    expect(downloads.has('100026362418520/posts-run-000001-part-0001.json')).toBeTrue();
+    expect(downloads.has('100026362418520/posts-run-000001-part-0002.json')).toBeTrue();
+    expect(downloads.has('100026362418520/posts-run-000001-index.json')).toBeTrue();
+    expect(downloads.has('100026362418520/posts.json')).toBeTrue();
+
+    const packed = JSON.parse(downloads.get('100026362418520/posts.json') ?? '{}') as {
+        posts: Array<{ id: string }>;
+    };
+    expect(packed.posts.length).toBe(550);
 });

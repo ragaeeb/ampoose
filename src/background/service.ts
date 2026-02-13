@@ -1,5 +1,5 @@
-import type { BridgeAction, BridgeRequest, BridgeResponse, BridgeResponsePayloadMap } from '@/runtime/bridge/actions';
 import { buildDownloadFilename } from '@/background/downloadPath';
+import type { BridgeAction, BridgeRequest, BridgeResponse, BridgeResponsePayloadMap } from '@/runtime/bridge/actions';
 
 const UI_SETTINGS_KEY = 'fbpem-ui-settings';
 const PERSIST_KEY = 'fbpem-persist';
@@ -84,11 +84,10 @@ async function downloadTextAsFile(
     useDataUrl = false,
 ): Promise<{ ok: boolean; method?: 'blob' | 'data'; id?: number; error?: string }> {
     const safeFilename = buildDownloadFilename(filename || 'posts.json');
-    const data = typeof text === 'string' ? text : String(text ?? '');
 
     try {
         if (!useDataUrl) {
-            const blob = new Blob([data], { type: mimeType });
+            const blob = new Blob([text], { type: mimeType });
             const url = URL.createObjectURL(blob);
             const id = await chrome.downloads.download({
                 conflictAction: 'uniquify',
@@ -108,12 +107,8 @@ async function downloadTextAsFile(
     }
 
     try {
-        const bytes = new TextEncoder().encode(data);
-        let binary = '';
-        for (const byte of bytes) {
-            binary += String.fromCharCode(byte);
-        }
-        const base64 = btoa(binary);
+        const bytes = new TextEncoder().encode(text);
+        const base64 = btoa(Array.from(bytes, (b) => String.fromCharCode(b)).join(''));
         const url = `data:${mimeType};base64,${base64}`;
         const id = await chrome.downloads.download({
             conflictAction: 'uniquify',

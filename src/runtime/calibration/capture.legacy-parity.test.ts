@@ -43,7 +43,7 @@ it('should record required query docIds from graphql requests', async () => {
         const artifact = manager.buildArtifact();
         expect(artifact.entries.ProfileCometTimelineFeedRefetchQuery?.docId).toBe('111');
         expect(artifact.entries.CometSinglePostDialogContentQuery?.docId).toBe('222');
-        expect('cursor' in artifact.entries.ProfileCometTimelineFeedRefetchQuery!.variables).toBe(false);
+        expect('cursor' in artifact.entries.ProfileCometTimelineFeedRefetchQuery!.variables).toBeFalse();
         expect(artifact.entries.ProfileCometTimelineFeedRefetchQuery?.variables.id).toBe('profile-id-1');
         expect(artifact.entries.ProfileCometTimelineFeedRefetchQuery?.requestParams?.__a).toBeUndefined();
     } finally {

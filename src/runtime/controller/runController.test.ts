@@ -41,14 +41,14 @@ describe('RunController (extra)', () => {
         expect(states.length).toBe(1);
 
         controller.setOpen(true);
-        expect(states.at(-1)?.open).toBe(true);
+        expect(states.at(-1)?.open).toBeTrue();
 
         controller.updateSettings({ isUsePostsFilter: true });
-        expect(states.at(-1)?.settings?.isUsePostsFilter).toBe(true);
+        expect(states.at(-1)?.settings?.isUsePostsFilter).toBeTrue();
 
         unsubscribe();
         controller.setOpen(false);
-        expect(states.at(-1)?.open).toBe(true);
+        expect(states.at(-1)?.open).toBeTrue();
     });
 
     it('should stop immediately and set DONE step', () => {
@@ -72,8 +72,8 @@ describe('RunController (extra)', () => {
 
         const state = controller.getState();
         expect(state.step).toBe('DONE');
-        expect(state.isStopManually).toBe(true);
-        expect(state.logs.some((entry) => entry.msg.includes('run: stopped manually'))).toBe(true);
+        expect(state.isStopManually).toBeTrue();
+        expect(state.logs.some((entry) => entry.msg.includes('run: stopped manually'))).toBeTrue();
     });
 
     it('should save calibration from capture when complete', async () => {
@@ -132,15 +132,14 @@ describe('RunController (extra)', () => {
 
         await controller.saveCalibrationFromCapture();
         expect(saveCalibration).toHaveBeenCalledTimes(0);
-        expect(controller.getState().logs.some((entry) => entry.type === 'warn')).toBe(true);
+        expect(controller.getState().logs.some((entry) => entry.type === 'warn')).toBeTrue();
     });
 
     it('should run calibration automation quickly when a post link is present', async () => {
         const saveCalibration = mock(async () => {});
         const stopCapture = mock(async () => {});
 
-        document.body.innerHTML =
-            "<a href='https://www.facebook.com/permalink.php?story_fbid=123&fbid=123'>post</a>";
+        document.body.innerHTML = "<a href='https://www.facebook.com/permalink.php?story_fbid=123&fbid=123'>post</a>";
 
         const scrollBy = mock(() => {});
         (window as any).scrollBy = scrollBy;
@@ -187,7 +186,11 @@ describe('RunController (extra)', () => {
                     nextCursor: 'next',
                     posts: [
                         { content: 'first', createdAt: nowMs, post_id: '1' },
-                        { content: 'old-boundary', createdAt: Math.floor((nowMs - 8 * 24 * 60 * 60 * 1000) / 1000), post_id: 'old-boundary' },
+                        {
+                            content: 'old-boundary',
+                            createdAt: Math.floor((nowMs - 8 * 24 * 60 * 60 * 1000) / 1000),
+                            post_id: 'old-boundary',
+                        },
                     ],
                 };
             }
@@ -262,7 +265,11 @@ describe('RunController (extra)', () => {
                     nextCursor: 'next',
                     posts: [
                         { content: 'recent', createdAt: nowMs, post_id: 'recent' },
-                        { content: 'old', createdAt: Math.floor((nowMs - 10 * 24 * 60 * 60 * 1000) / 1000), post_id: 'old' },
+                        {
+                            content: 'old',
+                            createdAt: Math.floor((nowMs - 10 * 24 * 60 * 60 * 1000) / 1000),
+                            post_id: 'old',
+                        },
                     ],
                 };
             }),
@@ -278,7 +285,7 @@ describe('RunController (extra)', () => {
         await controller.start();
         const state = controller.getState();
         expect(state.posts.map((post) => String(post.post_id))).toEqual(['recent']);
-        expect(state.logs.some((entry) => entry.msg.includes('stop: reason=date-boundary'))).toBe(true);
+        expect(state.logs.some((entry) => entry.msg.includes('stop: reason=date-boundary'))).toBeTrue();
     });
 
     it('should throw when captured calibration artifact is invalid', async () => {
@@ -467,10 +474,10 @@ describe('RunController (extra)', () => {
 
         const logs = controller.getState().logs.map((entry) => entry.msg);
         expect(queryPage).toHaveBeenCalledTimes(4);
-        expect(sleepCalls.some((value) => value === 250)).toBe(true);
-        expect(sleepCalls.some((value) => value >= 1000)).toBe(true);
-        expect(logs.some((msg) => msg.includes('rate-limit: pacing wait='))).toBe(true);
-        expect(logs.some((msg) => msg.includes('avoid account restrictions'))).toBe(true);
+        expect(sleepCalls.some((value) => value === 250)).toBeTrue();
+        expect(sleepCalls.some((value) => value >= 1000)).toBeTrue();
+        expect(logs.some((msg) => msg.includes('rate-limit: pacing wait='))).toBeTrue();
+        expect(logs.some((msg) => msg.includes('avoid account restrictions'))).toBeTrue();
     });
 
     it('should log start settings and explicit no-next-cursor stop reason', async () => {
@@ -499,9 +506,9 @@ describe('RunController (extra)', () => {
         await controller.start();
 
         const logs = controller.getState().logs.map((entry) => entry.msg);
-        expect(logs.some((msg) => msg.includes('run: start') && msg.includes('mode=ALL'))).toBe(true);
-        expect(logs.some((msg) => msg.includes('stop: reason=no-next-cursor'))).toBe(true);
-        expect(logs.some((msg) => msg.includes('run: done reason=no-next-cursor'))).toBe(true);
+        expect(logs.some((msg) => msg.includes('run: start') && msg.includes('mode=ALL'))).toBeTrue();
+        expect(logs.some((msg) => msg.includes('stop: reason=no-next-cursor'))).toBeTrue();
+        expect(logs.some((msg) => msg.includes('run: done reason=no-next-cursor'))).toBeTrue();
     });
 
     it('should resume from imported post payloads by skipping known IDs first', async () => {
@@ -548,16 +555,16 @@ describe('RunController (extra)', () => {
         });
 
         await (controller as any).resumeFromImportedPayloads([
-            [{ id: 'known-1', content: 'known post', createdAt: 1_750_000_000 }],
+            [{ content: 'known post', createdAt: 1_750_000_000, id: 'known-1' }],
         ]);
 
         const state = controller.getState();
         const logs = state.logs.map((entry) => entry.msg);
         expect(queryPage).toHaveBeenCalledTimes(7);
-        expect(state.posts.some((post) => post.post_id === 'new-1')).toBe(true);
-        expect(logs.some((msg) => msg.includes('resume: imported known post ids=1'))).toBe(true);
-        expect(logs.some((msg) => msg.includes('resume: warmup complete'))).toBe(true);
-        expect(logs.some((msg) => msg.includes('stop: reason=duplicate-loop'))).toBe(false);
+        expect(state.posts.some((post) => post.post_id === 'new-1')).toBeTrue();
+        expect(logs.some((msg) => msg.includes('resume: imported known post ids=1'))).toBeTrue();
+        expect(logs.some((msg) => msg.includes('resume: warmup complete'))).toBeTrue();
+        expect(logs.some((msg) => msg.includes('stop: reason=duplicate-loop'))).toBeFalse();
     });
 
     it('should keep resume warmup active until first exportable post even when non-text pages repeat', async () => {
@@ -567,18 +574,18 @@ describe('RunController (extra)', () => {
             if (page === 1) {
                 return {
                     nextCursor: 'loop-cursor',
-                    posts: [{ post_id: 'nontext-1', content: '   ' }],
+                    posts: [{ content: '   ', post_id: 'nontext-1' }],
                 };
             }
             if (page <= 7) {
                 return {
                     nextCursor: 'loop-cursor',
-                    posts: [{ post_id: 'nontext-1', content: '   ' }],
+                    posts: [{ content: '   ', post_id: 'nontext-1' }],
                 };
             }
             return {
                 nextCursor: null,
-                posts: [{ post_id: 'new-1', content: 'new exportable post' }],
+                posts: [{ content: 'new exportable post', post_id: 'new-1' }],
             };
         });
 
@@ -604,14 +611,14 @@ describe('RunController (extra)', () => {
         });
 
         controller.updateSettings({ fetchingCountType: FETCH_MODE.ALL, isUsePostsFilter: false, requestDelay: 0 });
-        await (controller as any).resumeFromImportedPayloads([[{ id: 'known-1', content: 'known', createdAt: 1 }]]);
+        await (controller as any).resumeFromImportedPayloads([[{ content: 'known', createdAt: 1, id: 'known-1' }]]);
 
         const state = controller.getState();
         const logs = state.logs.map((entry) => entry.msg);
         expect(queryPage).toHaveBeenCalledTimes(8);
-        expect(state.posts.some((post) => post.post_id === 'new-1')).toBe(true);
-        expect(logs.some((msg) => msg.includes('stop: reason=duplicate-loop'))).toBe(false);
-        expect(logs.some((msg) => msg.includes('resume: warmup complete'))).toBe(true);
+        expect(state.posts.some((post) => post.post_id === 'new-1')).toBeTrue();
+        expect(logs.some((msg) => msg.includes('stop: reason=duplicate-loop'))).toBeFalse();
+        expect(logs.some((msg) => msg.includes('resume: warmup complete'))).toBeTrue();
     });
 
     it('should truncate cursor values in runtime logs', async () => {
@@ -640,8 +647,8 @@ describe('RunController (extra)', () => {
         await controller.start({ cursor: longCursor });
 
         const startLog = controller.getState().logs.find((entry) => entry.msg.includes('run: start'));
-        expect(startLog?.msg.includes('(len=160)')).toBe(true);
-        expect(startLog?.msg.includes(`${'x'.repeat(160)}`)).toBe(false);
+        expect(startLog?.msg.includes('(len=160)')).toBeTrue();
+        expect(startLog?.msg.includes(`${'x'.repeat(160)}`)).toBeFalse();
     });
 
     it('should log recalibration hint for graphql retry failures', async () => {
@@ -672,7 +679,7 @@ describe('RunController (extra)', () => {
 
         await expect(controller.start()).rejects.toThrow('GraphQL request failed after retries');
         const logs = controller.getState().logs.map((entry) => entry.msg);
-        expect(logs.some((msg) => msg.includes('calibration/session may be stale'))).toBe(true);
+        expect(logs.some((msg) => msg.includes('calibration/session may be stale'))).toBeTrue();
     });
 
     it('should download redacted json with trimmed content', async () => {
@@ -747,7 +754,7 @@ describe('RunController (extra)', () => {
         await controller.start();
         controller.logEarliestVisiblePost();
         const logs = controller.getState().logs.map((entry) => entry.msg);
-        expect(logs.some((msg) => msg.includes('probe: earliest-visible-post id=1780554499499947'))).toBe(true);
+        expect(logs.some((msg) => msg.includes('probe: earliest-visible-post id=1780554499499947'))).toBeTrue();
     });
 
     it('should probe earliest accessible post by paginating without downloads', async () => {
@@ -787,7 +794,7 @@ describe('RunController (extra)', () => {
 
         await controller.probeEarliestAccessiblePost();
         const logs = controller.getState().logs.map((entry) => entry.msg);
-        expect(logs.some((msg) => msg.includes('probe: earliest-accessible-post id=1780554499499947'))).toBe(true);
+        expect(logs.some((msg) => msg.includes('probe: earliest-accessible-post id=1780554499499947'))).toBeTrue();
         expect(queryPage).toHaveBeenCalledTimes(2);
     });
 
@@ -830,8 +837,8 @@ describe('RunController (extra)', () => {
         await probing;
 
         const logs = controller.getState().logs.map((entry) => entry.msg);
-        expect(logs.some((msg) => msg.includes('probe: stop requested'))).toBe(true);
-        expect(logs.some((msg) => msg.includes('probe: stop manual'))).toBe(true);
+        expect(logs.some((msg) => msg.includes('probe: stop requested'))).toBeTrue();
+        expect(logs.some((msg) => msg.includes('probe: stop manual'))).toBeTrue();
     });
 
     it('should treat abort during manual stop as non-fatal and avoid run failed error log', async () => {
@@ -894,8 +901,8 @@ describe('RunController (extra)', () => {
         const state = controller.getState();
         const logs = state.logs.map((entry) => entry.msg);
         expect(state.error).toBeNull();
-        expect(logs.some((msg) => msg.includes('run: failed reason=error'))).toBe(false);
-        expect(logs.some((msg) => msg.includes('stop: reason=manual-stop'))).toBe(true);
+        expect(logs.some((msg) => msg.includes('run: failed reason=error'))).toBeFalse();
+        expect(logs.some((msg) => msg.includes('stop: reason=manual-stop'))).toBeTrue();
     });
 
     it('should log explicit empty-page debug message instead of null window values', async () => {
@@ -903,7 +910,7 @@ describe('RunController (extra)', () => {
             if (!cursor) {
                 return { nextCursor: 'next', posts: [] };
             }
-            return { nextCursor: null, posts: [{ post_id: '1', content: 'hello' }] };
+            return { nextCursor: null, posts: [{ content: 'hello', post_id: '1' }] };
         });
 
         const controller = new RunController({
@@ -931,8 +938,16 @@ describe('RunController (extra)', () => {
         await controller.start();
 
         const logs = controller.getState().logs.map((entry) => entry.msg);
-        expect(logs.some((msg) => msg.includes('[debug] page(empty): fetched=0 deduped=0'))).toBe(true);
-        expect(logs.some((msg) => msg.includes('[debug] page(filter): valid=0 filtered=0 boundaryReached=false cutoffMs=0'))).toBe(false);
-        expect(logs.some((msg) => msg.includes('[debug] page(window): firstId=null lastId=null firstCreatedAt=0 lastCreatedAt=0'))).toBe(false);
+        expect(logs.some((msg) => msg.includes('[debug] page(empty): fetched=0 deduped=0'))).toBeTrue();
+        expect(
+            logs.some((msg) =>
+                msg.includes('[debug] page(filter): valid=0 filtered=0 boundaryReached=false cutoffMs=0'),
+            ),
+        ).toBeFalse();
+        expect(
+            logs.some((msg) =>
+                msg.includes('[debug] page(window): firstId=null lastId=null firstCreatedAt=0 lastCreatedAt=0'),
+            ),
+        ).toBeFalse();
     });
 });

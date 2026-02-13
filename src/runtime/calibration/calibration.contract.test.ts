@@ -1,4 +1,4 @@
-import { expect, mock, it } from 'bun:test';
+import { expect, it, mock } from 'bun:test';
 import {
     buildGraphqlArtifact,
     getMissingRequiredQueries,
@@ -117,11 +117,11 @@ it('should use local calibration entries and not depend on graphql-info host', a
         variables: { cursor: 'abc' },
     });
 
-    expect(result.ok).toBe(true);
+    expect(result.ok).toBeTrue();
     expect(calls.length).toBe(1);
     expect(calls[0]?.url).toBe('/api/graphql/');
-    expect(calls[0]?.body.includes('doc_id=123')).toBe(true);
-    expect(calls[0]?.body.includes('__a=1')).toBe(true);
+    expect(calls[0]?.body.includes('doc_id=123')).toBeTrue();
+    expect(calls[0]?.body.includes('__a=1')).toBeTrue();
 });
 
 it('should parse anti-hijacking prefixed JSON responses', async () => {
@@ -146,7 +146,7 @@ it('should parse anti-hijacking prefixed JSON responses', async () => {
         queryName: 'ProfileCometTimelineFeedRefetchQuery',
     });
 
-    expect(result.data.ok).toBe(true);
+    expect(result.data.ok).toBeTrue();
 });
 
 it('should parse newline-delimited json payloads', async () => {
@@ -171,7 +171,7 @@ it('should parse newline-delimited json payloads', async () => {
         queryName: 'ProfileCometTimelineFeedRefetchQuery',
     });
 
-    expect(result.data.ok).toBe(true);
+    expect(result.data.ok).toBeTrue();
 });
 
 it('should return full payload list for newline-delimited responses when responseMode=all', async () => {
@@ -197,7 +197,7 @@ it('should return full payload list for newline-delimited responses when respons
         responseMode: 'all',
     });
 
-    expect(Array.isArray(result)).toBe(true);
+    expect(Array.isArray(result)).toBeTrue();
     expect(result.length).toBe(2);
 });
 
@@ -251,9 +251,9 @@ it('should retry with /graphql/query when default /api/graphql body is empty', a
         queryName: 'ProfileCometTimelineFeedRefetchQuery',
     });
 
-    expect(result.data.ok).toBe(true);
+    expect(result.data.ok).toBeTrue();
     expect(calls[0]).toBe('/api/graphql/');
-    expect(calls.includes('/graphql/query/')).toBe(true);
+    expect(calls.includes('/graphql/query/')).toBeTrue();
 });
 
 it('should retry same endpoint without captured request params when stale params fail', async () => {
@@ -294,8 +294,8 @@ it('should retry same endpoint without captured request params when stale params
         queryName: 'ProfileCometTimelineFeedRefetchQuery',
     });
 
-    expect(result.data.ok).toBe(true);
+    expect(result.data.ok).toBeTrue();
     expect(calls.length).toBe(2);
-    expect(calls[0]?.body.includes('__req=stale')).toBe(true);
-    expect(calls[1]?.body.includes('__req=stale')).toBe(false);
+    expect(calls[0]?.body.includes('__req=stale')).toBeTrue();
+    expect(calls[1]?.body.includes('__req=stale')).toBeFalse();
 });

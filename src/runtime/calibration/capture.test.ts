@@ -16,13 +16,13 @@ describe('calibration capture (extra)', () => {
         manager.start();
 
         const body = JSON.stringify({
-            fb_api_req_friendly_name: 'timeline refetch query',
             doc_id: '111',
-            variables: { cursor: 'abc', id: 'profile-id', __spin_r: 'should-strip' },
+            fb_api_req_friendly_name: 'timeline refetch query',
             lsd: 'keep-this',
+            variables: { __spin_r: 'should-strip', cursor: 'abc', id: 'profile-id' },
         });
 
-        await window.fetch('/api/graphql/', { method: 'POST', body });
+        await window.fetch('/api/graphql/', { body, method: 'POST' });
 
         expect(manager.getCaptureCount()).toBe(1);
         expect(manager.getCapturedNames()).toContain('ProfileCometTimelineFeedRefetchQuery');
@@ -46,7 +46,7 @@ describe('calibration capture (extra)', () => {
         form.set('doc_id', '222');
         form.set('variables', JSON.stringify({ storyID: 'x' }));
 
-        await window.fetch('/api/graphql/', { method: 'POST', body: form });
+        await window.fetch('/api/graphql/', { body: form, method: 'POST' });
 
         expect(manager.getCapturedNames()).toContain('CometSinglePostDialogContentQuery');
         expect((manager.buildArtifact() as any).entries.CometSinglePostDialogContentQuery.docId).toBe('222');
@@ -64,7 +64,7 @@ describe('calibration capture (extra)', () => {
         params.set('doc_id', '333');
         params.set('variables', JSON.stringify({ id: 'x' }));
 
-        await window.fetch('/api/graphql/', { method: 'POST', body: params });
+        await window.fetch('/api/graphql/', { body: params, method: 'POST' });
 
         expect(manager.getCaptureCount()).toBe(0);
         expect(manager.getUnmatchedNames()).toContain('RandomUnknownQuery');
@@ -121,16 +121,16 @@ describe('calibration capture (extra)', () => {
 
         await window.fetch('https://www.facebook.com/api/graphql/', {
             body: JSON.stringify({
-                doc_id: '779',
-                fb_api_req_friendly_name: 'profilecomettimelinefeedrefetchquery_alias',
-                kept: '1',
-                lsd: 'secret',
                 __a: '1',
                 __csr: 'csr',
                 __req: '3',
                 __s: 'abc',
                 __spin_r: 'x',
+                doc_id: '779',
                 empty: '',
+                fb_api_req_friendly_name: 'profilecomettimelinefeedrefetchquery_alias',
+                kept: '1',
+                lsd: 'secret',
                 variables: 123,
             }),
             method: 'POST',
@@ -159,7 +159,7 @@ describe('calibration capture (extra)', () => {
         const manager = createCalibrationCaptureManager();
         manager.start();
 
-        await (window.fetch as any)({ url: 123 }, { method: 'POST', body: 777 });
+        await (window.fetch as any)({ url: 123 }, { body: 777, method: 'POST' });
         expect(manager.getCaptureCount()).toBe(0);
 
         await (window.fetch as any)({

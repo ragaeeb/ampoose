@@ -8,7 +8,7 @@ import {
 } from '@/domain/chunk/chunking';
 import { buildExportEnvelope, stringifyExportData } from '@/domain/export/envelope';
 import { normalizePostContent, resolvePostId, sanitizeExportPost } from '@/domain/export/sanitize';
-import type { GraphqlArtifactV1 } from '@/domain/types';
+import type { ExportPost, GraphqlArtifactV1 } from '@/domain/types';
 import { findFirstPostPermalinkLink, preparePostLinkForOpen } from '@/runtime/calibration/postLink';
 import {
     buildCollectionRelativeFilename,
@@ -263,6 +263,8 @@ export class RunController {
     private resumeSeedActive = false;
     private resumeWarmupDuplicatePages = 0;
     private resumeWarmupPages = 0;
+    private collectedExportPosts: ExportPost[] = [];
+    private firstExportSourcePost: RuntimePost | null = null;
 
     constructor(deps: ControllerDeps) {
         this.deps = deps;
@@ -421,6 +423,9 @@ export class RunController {
                 'info',
                 `run: done reason=${result.reason} pages=${this.state.progress.pagesFetched} totalPosts=${this.state.progress.totalPosts} next=${formatCursor(this.state.progress.nextCursor)}`,
             );
+            if (result.reason !== 'manual-stop' && this.state.chunkState.partFiles.length > 0) {
+                await this.downloadJson({ auto: true });
+            }
             this.emit();
         } catch (error) {
             const details = String(error instanceof Error ? error.message : error);
@@ -453,6 +458,8 @@ export class RunController {
         this.resumeSeedActive = false;
         this.resumeWarmupDuplicatePages = 0;
         this.resumeWarmupPages = 0;
+        this.collectedExportPosts = [];
+        this.firstExportSourcePost = null;
 
         this.state.runId = normalizeRunId(this.state.runId + 1);
         this.state.step = 'DOWNLOADING';
@@ -587,6 +594,15 @@ export class RunController {
             }
 
             const { valid, filteredOut, boundaryReached, reasons } = filterPostsForExport(deduped, dateFilter);
+            const exportable = valid
+                .map((post) => sanitizeExportPost(post))
+                .filter((post): post is NonNullable<typeof post> => Boolean(post));
+            if (exportable.length > 0) {
+                this.collectedExportPosts.push(...exportable);
+            }
+            if (!this.firstExportSourcePost && valid[0]) {
+                this.firstExportSourcePost = valid[0];
+            }
             if (filteredOut > 0) {
                 this.addLog(
                     'info',
@@ -658,6 +674,7 @@ export class RunController {
         if (this.state.progress.totalPosts < this.state.settings.fetchingCountByPostCountValue) {
             return false;
         }
+        this.state.isOnLimit = true;
         this.state.posts = this.state.posts.slice(0, this.state.settings.fetchingCountByPostCountValue);
         this.state.progress.totalPosts = this.state.posts.length;
         return true;
@@ -755,11 +772,20 @@ export class RunController {
                 this.state.chunkState.lastAutoIndexSignature = signature;
             }
             this.addLog('info', 'download: emitted chunk index');
+            const packedEnvelope = this.buildPackedEnvelope();
+            const packedFilename = this.resolveDownloadFilename('posts.json');
+            await this.deps.downloadClient.downloadTextAsFile(
+                stringifyExportData(packedEnvelope),
+                packedFilename,
+                'application/json',
+                false,
+            );
+            this.addLog('info', `download: packed posts.json path=${packedFilename}`);
             this.emit();
             return;
         }
 
-        const envelope = buildExportEnvelope(this.state.posts);
+        const envelope = this.buildPackedEnvelope();
         const targetFilename = this.resolveDownloadFilename('posts.json');
         await this.deps.downloadClient.downloadTextAsFile(
             stringifyExportData(envelope),
@@ -768,6 +794,18 @@ export class RunController {
             false,
         );
         this.addLog('info', `download: direct posts.json path=${targetFilename}`);
+    }
+
+    private buildPackedEnvelope() {
+        const sourcePost = this.firstExportSourcePost ?? this.state.posts[0] ?? null;
+        const baseEnvelope = sourcePost ? buildExportEnvelope([sourcePost]) : buildExportEnvelope([]);
+        if (this.collectedExportPosts.length === 0) {
+            return buildExportEnvelope(this.state.posts);
+        }
+        return {
+            ...baseEnvelope,
+            posts: [...this.collectedExportPosts],
+        };
     }
 
     async downloadJsonRedacted() {
