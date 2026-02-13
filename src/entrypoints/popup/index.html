@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Ampoose</title>
+        <link rel="stylesheet" href="./style.css" />
+    </head>
+    <body>
+        <main class="popup">
+            <h1 class="title">Ampoose</h1>
+            <label class="field">
+                <span class="label">Log Level</span>
+                <select id="log-level" class="select">
+                    <option value="error">Error</option>
+                    <option value="warn">Warn</option>
+                    <option value="info" selected>Info</option>
+                    <option value="debug">Debug (Verbose)</option>
+                </select>
+            </label>
+            <p class="hint">Use Debug to include verbose pagination and stop-reason diagnostics.</p>
+        </main>
+        <script type="module" src="./main.ts"></script>
+    </body>
+</html>

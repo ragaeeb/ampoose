@@ -1,0 +1,509 @@
+/* Design Tokens */
+:host,
+:root {
+  /* Colors - Neutral */
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #f9fafb;
+  --color-bg-tertiary: #f3f4f6;
+  --color-bg-muted: #e5e7eb;
+  /* Colors - Text */
+  --color-text-primary: #1f2937;
+  --color-text-secondary: #6b7280;
+  --color-text-tertiary: #9ca3af;
+  --color-text-inverse: #ffffff;
+  /* Colors - States */
+  --color-border: #d1d5db;
+  --color-border-light: #e5e7eb;
+  --color-border-dark: #9ca3af;
+  /* Colors - Semantic */
+  --color-success-bg: #ecfdf5;
+  --color-success-border: #d1fae5;
+  --color-success-text: #047857;
+  --color-info-bg: #eff6ff;
+  --color-info-border: #dbeafe;
+  --color-info-text: #1d4ed8;
+  --color-warning-bg: #fef2f2;
+  --color-warning-border: #fee2e2;
+  --color-warning-text: #b91c1c;
+  --color-error-bg: #fef2f2;
+  --color-error-border: #fecaca;
+  --color-error-text: #b91c1c;
+  /* Colors - Interactive */
+  --color-primary: #0f172a;
+  --color-primary-hover: #1f2937;
+  --color-secondary: #6b7280;
+  /* Typography */
+  --font-family-base: system-ui, -apple-system, "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica", "Arial",
+    "Helvetica Neue", sans-serif;
+  --font-family-mono: "Menlo", "Consolas", "Monaco", "Courier New", monospace;
+  --font-size-xs: 11px;
+  --font-size-sm: 12px;
+  --font-size-base: 13px;
+  --font-size-md: 14px;
+  --font-size-lg: 16px;
+  --font-size-xl: 19px;
+  --font-weight-normal: 400;
+  --font-weight-medium: 600;
+  --font-weight-bold: 700;
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+  --spacing-2xl: 24px;
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgb(0 0 0 / 5%);
+  --shadow-md: 0 4px 6px rgb(0 0 0 / 7%);
+  --shadow-lg: 0 10px 15px rgb(0 0 0 / 10%);
+  --shadow-xl: 0 18px 45px rgb(15 23 42 / 22%);
+  /* Border Radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  /* Z-index */
+  --z-modal: 2147483646;
+}
+
+/* Reset & Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+  border: none;
+}
+
+input,
+select {
+  font-family: inherit;
+}
+
+/* Typography Utilities */
+.text-primary {
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-normal);
+}
+
+.text-secondary {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-normal);
+}
+
+.text-sm {
+  font-size: var(--font-size-sm);
+}
+
+.text-xs {
+  font-size: var(--font-size-xs);
+}
+
+.font-mono {
+  font-family: var(--font-family-mono);
+}
+
+.font-semibold {
+  font-weight: var(--font-weight-medium);
+}
+
+.font-bold {
+  font-weight: var(--font-weight-bold);
+}
+
+/* Component Styles */
+
+/* Launcher Button */
+.launcher-button {
+  position: fixed;
+  bottom: var(--spacing-lg);
+  right: var(--spacing-lg);
+  z-index: var(--z-modal);
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  font-family: var(--font-family-base);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
+  transition: background-color 0.2s, box-shadow 0.2s;
+}
+
+.launcher-button:hover {
+  background: var(--color-primary-hover);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 20%);
+}
+
+.launcher-button img {
+  opacity: 0.95;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(15 23 42 / 36%);
+  backdrop-filter: blur(2px);
+}
+
+.modal-overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+/* Modal Dialog */
+.modal-dialog {
+  position: relative;
+  z-index: 1;
+  width: min(920px, 94vw);
+  max-height: 90vh;
+  overflow: hidden;
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 1px 0 rgb(0 0 0 / 10%), 0 2px 12px rgb(0 0 0 / 15%);
+  font-family: var(--font-family-base);
+}
+
+/* Modal Header */
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-lg) var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border-light);
+  background: var(--color-bg-primary);
+}
+
+.modal-header h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  letter-spacing: 0;
+  margin: 0;
+}
+
+.modal-header-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: 50%;
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-normal);
+  font-size: 20px;
+  line-height: 1;
+  padding: 0;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.modal-header-close-icon {
+  display: block;
+  line-height: 1;
+  transform: translateY(-1px);
+}
+
+.modal-header-close:hover {
+  background: #f0f2f5;
+  color: var(--color-text-primary);
+}
+
+/* Modal Content */
+.modal-content {
+  display: grid;
+  gap: 16px;
+  max-height: calc(90vh - 68px);
+  overflow: auto;
+  padding: 16px 20px;
+}
+
+/* Pills/Badges */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+}
+
+.pill-label {
+  opacity: 0.85;
+}
+
+.pill-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgb(255 255 255 / 30%);
+  border: none;
+  font-size: 12px;
+  font-weight: normal;
+  line-height: 1;
+  transition: background-color 0.2s;
+  cursor: pointer;
+}
+
+.pill-action-button:hover {
+  background: rgb(255 255 255 / 50%);
+}
+
+.pill.pill-step {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.pill.pill-done {
+  background: #e8f5e9;
+  color: #388e3c;
+}
+
+.pill.pill-default {
+  background: #f5f5f5;
+  color: #666;
+}
+
+.pill.pill-calibration-ready {
+  background: #e8f5e9;
+  color: #388e3c;
+}
+
+.pill.pill-calibration-capturing {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.pill.pill-calibration-missing {
+  background: #ffebee;
+  color: #c62828;
+}
+
+/* Error Banner */
+.error-banner {
+  background: #ffebee;
+  border: 1px solid #ffcdd2;
+  border-radius: var(--radius-lg);
+  color: #c62828;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  font-size: 13px;
+}
+
+/* Calibration Banner */
+.calibration-banner {
+  background: #e3f2fd;
+  border: 1px solid #bbdefb;
+  border-radius: var(--radius-lg);
+  color: #1565c0;
+  padding: 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Settings Panel */
+.settings-panel {
+  background: #f0f2f5;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+}
+
+.settings-label {
+  color: var(--color-text-primary);
+  display: grid;
+  font-size: 13px;
+  font-weight: 600;
+  gap: 6px;
+}
+
+.settings-label select,
+.settings-label input[type="number"] {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  font-family: var(--font-family-base);
+  font-size: 13px;
+  height: 32px;
+  padding: 0 8px;
+}
+
+.settings-label select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 20 20'%3E%3Cpath d='M5 7l5 5 5-5' fill='none' stroke='%2364748b' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-position: right var(--spacing-md) center;
+  background-repeat: no-repeat;
+  padding-right: 34px;
+}
+
+.settings-label input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.settings-checkbox-label {
+  align-items: center;
+  color: var(--color-text-secondary);
+  display: flex;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  gap: var(--spacing-md);
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+  height: 36px;
+  padding: 0 var(--spacing-lg);
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  border: none;
+}
+
+.button-primary {
+  background: #0a66c2;
+  color: var(--color-text-inverse);
+}
+
+.button-primary:hover {
+  background: #084a99;
+}
+
+.button-secondary {
+  background: #f0f2f5;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.button-secondary:hover {
+  background: #e4e6eb;
+}
+
+.button-large {
+  height: 36px;
+  padding: 0 var(--spacing-lg);
+}
+
+.button-compact {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  height: 30px;
+  padding: 0 var(--spacing-md);
+}
+
+/* Stats Display */
+.stats-display {
+  background: #f0f2f5;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  color: #65676b;
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  overflow-x: auto;
+  padding: 10px 12px;
+  white-space: nowrap;
+}
+
+/* Logs Panel */
+.logs-panel {
+  background: #f0f2f5;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  color: #65676b;
+  font-family: var(--font-family-mono);
+  font-size: 12px;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.logs-header {
+  background: #f0f2f5;
+  border-bottom: 1px solid var(--color-border);
+  color: #8a8d91;
+  font-size: 11px;
+  letter-spacing: 0.2px;
+  padding: 8px 10px;
+  position: sticky;
+  top: 0;
+  font-weight: 600;
+}
+
+.logs-content {
+  padding: 8px 10px;
+}
+
+.logs-empty {
+  color: #8a8d91;
+}
+
+.logs-entry {
+  line-height: 1.45;
+  margin-bottom: 2px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.logs-entry.error {
+  color: #c62828;
+}
+
+.logs-entry.warn {
+  color: #f57c00;
+}
+
+/* Pill groups */
+.pill-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.debug-controls {
+  align-items: center;
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.debug-controls-label {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+}
+
+.debug-controls-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
+}

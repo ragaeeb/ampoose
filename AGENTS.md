@@ -6,16 +6,17 @@ The runtime is Ampoose-owned and does not rely on upstream bundles.
 
 ## Read Order (Start Here)
 1. `README.md` — project overview, constraints, and usage.
-2. `docs/migration-status.md` — implementation status and validation notes.
-3. `src/runtime/controller/runController.ts` — active runtime orchestration.
-4. `tests/legacy-parity/*` — runtime and contract suite.
+2. `docs/chrome-web-store-submission.md` — Chrome Web Store listing notes, single-purpose, permissions.
+3. `docs/privacy-policy.md` — privacy policy for store submission (canonical).
+4. `src/runtime/controller/runController.ts` — active runtime orchestration.
+5. `tests/legacy-parity/*` — runtime and contract suite.
 
 ## Repo Layout
 - `wxt.config.ts` — WXT config and MV3 manifest fields.
 - `src/entrypoints/` — extension entrypoints.
   - `src/entrypoints/background.ts` — background/service worker.
   - `src/entrypoints/content.tsx` — content script UI mount.
-  - `src/entrypoints/main-world.ts` — main-world bridge/capture entry.
+  - `src/entrypoints/main-world.content.ts` — main-world (MAIN world) capture/bridge entry.
 - `src/ui/` — in-page React dialog and controls.
 - `src/runtime/` — runtime controller, bridge, calibration, logs, state.
 - `src/domain/` — pure typed domain modules (export/chunk/graphql/resume/checkpoint).
@@ -30,6 +31,12 @@ The runtime is Ampoose-owned and does not rely on upstream bundles.
 - `bun run test` — run bun:test suite.
 - `bun run test:coverage` — run tests with coverage.
 - `bun run check` — strict TypeScript check.
+
+## Coding Standards
+- **Tests**: All unit tests must use the `it('should ...')` convention.
+- **Test location**: Keep tests colocated with implementation files under `src/` (for example `foo.ts` with `foo.test.ts`). Do not add new tests under a top-level `tests/` folder.
+- **TypeScript**: Prefer inferred return types for functions whenever possible (avoid explicit `: Type` unless necessary).
+- **Functions**: Prefer arrow functions (`const foo = () => {}`) over classical `function foo() {}` declarations.
 
 ## Minimal Feature Contract (Must Keep)
 - Filter posts by date.
