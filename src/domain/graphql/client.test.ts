@@ -3,6 +3,8 @@ import { buildGraphqlArtifact } from '@/domain/calibration/artifact';
 import { createGraphqlClient } from '@/domain/graphql/client';
 import { createCalibrationCaptureManager } from '@/runtime/calibration/capture';
 
+const originalQuerySelector = document.querySelector.bind(document);
+const originalFetch = window.fetch;
 const originalLocationHref = window.location.href;
 
 const artifact = buildGraphqlArtifact({
@@ -18,6 +20,9 @@ afterEach(() => {
     document.body.innerHTML = '';
     document.cookie = '';
     window.location.href = originalLocationHref;
+    document.querySelector = originalQuerySelector;
+    (window as any).fetch = originalFetch;
+
     delete (window as unknown as Record<string, unknown>).__spin_b;
     delete (window as unknown as Record<string, unknown>).__spin_r;
     delete (window as unknown as Record<string, unknown>).__spin_t;

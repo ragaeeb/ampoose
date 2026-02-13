@@ -30,4 +30,12 @@ describe('error hints', () => {
     it('should return false for undefined', () => {
         expect(shouldSuggestRecalibrationFromError(undefined)).toBeFalse();
     });
+
+    it('should detect <!doctype html in preview', () => {
+        expect(
+            shouldSuggestRecalibrationFromError(
+                'GraphQL request failed after retries. preview="<!doctype html><html>"',
+            ),
+        ).toBeTrue();
+    });
 });

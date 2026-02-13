@@ -21,6 +21,7 @@ describe('content entrypoint', () => {
         await main(ctx);
 
         expect(createShadowRootUi).toHaveBeenCalledTimes(1);
+        expect(createShadowRootUi).toHaveBeenCalledWith(ctx, expect.any(Object));
         expect(autoMount).toHaveBeenCalledTimes(1);
         expect(capturedOptions?.name).toBe('ampoose-ui');
         expect(capturedOptions?.position).toBe('inline');

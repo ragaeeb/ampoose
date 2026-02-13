@@ -19,7 +19,7 @@ async function setStorage<T>(key: string, value: T): Promise<void> {
 }
 
 async function getPersistStore(): Promise<Record<string, unknown>> {
-    return (await getStorage<Record<string, unknown>>(PERSIST_KEY, {})) ?? {};
+    return await getStorage<Record<string, unknown>>(PERSIST_KEY, {});
 }
 
 async function setPersistStore(store: Record<string, unknown>): Promise<void> {
@@ -27,9 +27,7 @@ async function setPersistStore(store: Record<string, unknown>): Promise<void> {
 }
 
 async function getResumeStore(): Promise<Record<string, Record<string, { cursor: string; timestamp: number }>>> {
-    return (
-        (await getStorage<Record<string, Record<string, { cursor: string; timestamp: number }>>>(RESUME_KEY, {})) ?? {}
-    );
+    return await getStorage<Record<string, Record<string, { cursor: string; timestamp: number }>>>(RESUME_KEY, {});
 }
 
 async function setResumeStore(
