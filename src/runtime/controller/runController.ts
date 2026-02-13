@@ -7,7 +7,7 @@ import {
     getChunkSignature,
 } from '@/domain/chunk/chunking';
 import { buildExportEnvelope, stringifyExportData } from '@/domain/export/envelope';
-import { resolvePostId, sanitizeExportPost } from '@/domain/export/sanitize';
+import { normalizePostContent, resolvePostId, sanitizeExportPost } from '@/domain/export/sanitize';
 import type { GraphqlArtifactV1 } from '@/domain/types';
 import { findFirstPostPermalinkLink, preparePostLinkForOpen } from '@/runtime/calibration/postLink';
 import {
@@ -15,6 +15,7 @@ import {
     resolveCollectionContext,
     resolveCollectionFolderName,
 } from '@/runtime/controller/collectionPath';
+import { shouldSuggestRecalibrationFromError } from '@/runtime/controller/errorHints';
 import type { ControllerDeps, ControllerState, RuntimePost } from '@/runtime/controller/types';
 import { LogStore } from '@/runtime/logs/logStore';
 import { createDefaultSettings, FETCH_MODE, type RuntimeSettings } from '@/runtime/settings/types';
@@ -41,6 +42,13 @@ type DateFilterWindow = {
     active: boolean;
     cutoffMs: number;
     days: number;
+};
+
+type FilterReasonCounts = {
+    missingId: number;
+    emptyContent: number;
+    invalidCreatedAt: number;
+    outOfRange: number;
 };
 
 function computeDateFilterWindow(settings: RuntimeSettings, nowMs = Date.now()): DateFilterWindow {
@@ -74,27 +82,54 @@ function dedupeFetchedPosts(fetched: RuntimePost[], seen: Set<string>): { dedupe
 function filterPostsForExport(
     posts: RuntimePost[],
     dateFilter: DateFilterWindow,
-): { valid: RuntimePost[]; filteredOut: number; boundaryReached: boolean } {
+): { valid: RuntimePost[]; filteredOut: number; boundaryReached: boolean; reasons: FilterReasonCounts } {
+    const reasons: FilterReasonCounts = {
+        emptyContent: 0,
+        invalidCreatedAt: 0,
+        missingId: 0,
+        outOfRange: 0,
+    };
     const resolveCreatedAtMs = (post: RuntimePost, sanitized: ReturnType<typeof sanitizeExportPost>) => {
         return toEpochMs(post.createdAt ?? sanitized?.createdAt);
     };
 
     const valid = posts.filter((post) => {
+        const id = resolvePostId(post);
+        if (!id) {
+            reasons.missingId += 1;
+            return false;
+        }
+
+        const content = normalizePostContent(post.content);
+        if (!content) {
+            reasons.emptyContent += 1;
+            return false;
+        }
+
         const sanitized = sanitizeExportPost(post);
         if (!sanitized) {
+            reasons.emptyContent += 1;
             return false;
         }
         if (!dateFilter.active) {
             return true;
         }
         const createdAtMs = resolveCreatedAtMs(post, sanitized);
-        return createdAtMs > 0 && createdAtMs >= dateFilter.cutoffMs;
+        if (createdAtMs <= 0) {
+            reasons.invalidCreatedAt += 1;
+            return false;
+        }
+        if (createdAtMs < dateFilter.cutoffMs) {
+            reasons.outOfRange += 1;
+            return false;
+        }
+        return true;
     });
 
     const filteredOut = posts.length - valid.length;
 
     if (!dateFilter.active) {
-        return { boundaryReached: false, filteredOut, valid };
+        return { boundaryReached: false, filteredOut, reasons, valid };
     }
 
     const boundaryReached = posts.some((post) => {
@@ -106,7 +141,7 @@ function filterPostsForExport(
         return createdAtMs > 0 && createdAtMs < dateFilter.cutoffMs;
     });
 
-    return { boundaryReached, filteredOut, valid };
+    return { boundaryReached, filteredOut, reasons, valid };
 }
 
 function isAllModeWithoutDateFilter(settings: RuntimeSettings, dateFilter: DateFilterWindow): boolean {
@@ -114,8 +149,59 @@ function isAllModeWithoutDateFilter(settings: RuntimeSettings, dateFilter: DateF
 }
 
 function formatCursor(value: string | null): string {
-    return value ?? 'null';
+    if (!value) {
+        return 'null';
+    }
+    const head = 20;
+    const tail = 16;
+    if (value.length <= head + tail + 3) {
+        return value;
+    }
+    return `${value.slice(0, head)}...${value.slice(-tail)}(len=${value.length})`;
 }
+
+function formatFetchModeLabel(mode: RuntimeSettings['fetchingCountType']): string {
+    if (mode === FETCH_MODE.ALL) {
+        return 'ALL';
+    }
+    if (mode === FETCH_MODE.BY_POST_COUNT) {
+        return 'BY_POST_COUNT';
+    }
+    if (mode === FETCH_MODE.BY_DAYS_COUNT) {
+        return 'BY_DAYS_COUNT';
+    }
+    if (mode === FETCH_MODE.PACK) {
+        return 'PACK';
+    }
+    return String(mode);
+}
+
+const LOG_LEVEL_PRIORITY = {
+    debug: 3,
+    error: 0,
+    info: 2,
+    warn: 1,
+} as const;
+
+type RunStopReason =
+    | 'manual-stop'
+    | 'duplicate-loop'
+    | 'date-boundary'
+    | 'post-count-limit'
+    | 'no-next-cursor';
+
+type RunLoopResult = {
+    reason: RunStopReason;
+};
+
+const REDACTED_CONTENT_LIMIT = 96;
+const RATE_LIMIT_RANDOM_WAIT_MIN_MS = 500;
+const RATE_LIMIT_RANDOM_WAIT_MAX_MS = 5_000;
+const RATE_LIMIT_RANDOM_WAIT_STRETCH_MS = 100;
+const RATE_LIMIT_RANDOM_WAIT_BASE_MS = 200;
+const RATE_LIMIT_RANDOM_WAIT_LOG_THRESHOLD_MS = 1_000;
+const RESUME_WARMUP_DUPLICATE_PAGE_LIMIT = 300;
+const RESUME_WARMUP_PAGE_LIMIT = 600;
 
 function formatCalibrationStatusParts(status: {
     captureCount: number;
@@ -140,6 +226,27 @@ function calibrationStatusSignature(status: {
     return `${status.captureCount}|${parts.captured}|${parts.missing}|${parts.unmatched}`;
 }
 
+function redactContentForDebug(value: string): { content: string; contentLength: number; redacted: boolean } {
+    if (value.length <= REDACTED_CONTENT_LIMIT) {
+        return { content: value, contentLength: value.length, redacted: false };
+    }
+    return {
+        content: `${value.slice(0, REDACTED_CONTENT_LIMIT)}...`,
+        contentLength: value.length,
+        redacted: true,
+    };
+}
+
+function isAbortLikeErrorMessage(message: string): boolean {
+    const text = message.toLowerCase();
+    return (
+        text.includes('calibration action aborted') ||
+        text.includes('aborted') ||
+        text.includes('aborterror') ||
+        text.includes('signal is aborted')
+    );
+}
+
 export class RunController {
     private deps: ControllerDeps;
     private state: ControllerState;
@@ -149,6 +256,13 @@ export class RunController {
     private duplicateGuard = createDuplicatePageGuard(5);
     private seenPostIds = new Set<string>();
     private calibrationAutoTask: Promise<void> | null = null;
+    private probeTask: Promise<void> | null = null;
+    private probeStopRequested = false;
+    private probePageAbortController: AbortController | null = null;
+    private rateLimitPacingCount = 0;
+    private resumeSeedActive = false;
+    private resumeWarmupDuplicatePages = 0;
+    private resumeWarmupPages = 0;
 
     constructor(deps: ControllerDeps) {
         this.deps = deps;
@@ -201,9 +315,24 @@ export class RunController {
     }
 
     addLog(type: 'info' | 'warn' | 'error', msg: string, payload?: unknown) {
+        if (!this.shouldLog(type)) {
+            return;
+        }
         this.logStore.add(type, msg, payload);
         this.state.logs = this.logStore.getAll();
         this.emit();
+    }
+
+    private shouldLog(type: 'info' | 'warn' | 'error'): boolean {
+        const current = this.state.settings.logLevel;
+        return LOG_LEVEL_PRIORITY[type] <= LOG_LEVEL_PRIORITY[current];
+    }
+
+    private addDebugLog(msg: string, payload?: unknown) {
+        if (this.state.settings.logLevel !== 'debug') {
+            return;
+        }
+        this.addLog('info', `[debug] ${msg}`, payload);
     }
 
     async loadCalibrationStatus(): Promise<GraphqlArtifactV1 | null> {
@@ -241,6 +370,10 @@ export class RunController {
     async startCalibrationCapture() {
         await this.deps.calibrationClient.startCapture();
         this.state.calibrationStatus = 'capturing';
+        if (this.state.step !== 'DOWNLOADING') {
+            this.state.step = 'START';
+        }
+        this.state.error = null;
         this.addLog('info', 'calibration: capture enabled');
         this.addLog('info', 'calibration: start');
         this.emit();
@@ -255,32 +388,59 @@ export class RunController {
     async stopCalibrationCapture() {
         await this.deps.calibrationClient.stopCapture();
         this.state.calibrationStatus = 'missing';
+        if (this.state.step !== 'DOWNLOADING') {
+            this.state.step = 'START';
+        }
         this.addLog('info', 'calibration: capture disabled');
         this.emit();
     }
 
-    async start(options: { resume?: boolean; cursor?: string | null } = {}) {
+    async start(options: { resume?: boolean; cursor?: string | null; seededResume?: boolean } = {}) {
         await this.loadCalibrationStatus();
         if (this.state.calibrationStatus !== 'ready') {
             throw new Error('DocId calibration required before export.');
         }
 
-        if (options.resume) {
+        if (options.seededResume) {
+            this.prepareSeededResumeRun();
+        } else if (options.resume) {
             this.prepareResumeRun();
         } else {
             this.prepareNewRun();
         }
 
-        this.addLog('info', 'run: start');
+        this.addLog(
+            'info',
+            `run: start collection=${this.state.collectionId || 'unknown'} mode=${formatFetchModeLabel(this.state.settings.fetchingCountType)} useDateFilter=${this.state.settings.isUsePostsFilter} count=${this.state.settings.fetchingCountByPostCountValue} days=${this.state.settings.fetchingCountByPostDaysValue} requestDelayMs=${this.state.settings.requestDelay} fetchLimit=${this.state.settings.fetchLimit} logLevel=${this.state.settings.logLevel} resume=${Boolean(options.resume || options.seededResume)} cursor=${formatCursor(options.cursor ?? null)}`,
+        );
 
         try {
-            await this.runExportLoop(options.cursor ?? null);
+            const result = await this.runExportLoop(options.cursor ?? null);
             this.state.step = 'DONE';
+            this.addLog(
+                'info',
+                `run: done reason=${result.reason} pages=${this.state.progress.pagesFetched} totalPosts=${this.state.progress.totalPosts} next=${formatCursor(this.state.progress.nextCursor)}`,
+            );
             this.emit();
         } catch (error) {
-            this.state.error = String(error instanceof Error ? error.message : error);
+            const details = String(error instanceof Error ? error.message : error);
+            if (this.state.isStopManually && isAbortLikeErrorMessage(details)) {
+                this.state.error = null;
+                this.state.step = 'DONE';
+                this.addLog('info', 'stop: reason=manual-stop');
+                this.emit();
+                return;
+            }
+
+            this.state.error = details;
             this.state.step = 'DONE';
-            this.addLog('error', this.state.error);
+            if (shouldSuggestRecalibrationFromError(this.state.error)) {
+                this.addLog(
+                    'warn',
+                    'run: calibration/session may be stale after GraphQL retry failure; click Recalibrate then Start again',
+                );
+            }
+            this.addLog('error', `run: failed reason=error message=${this.state.error}`);
             throw error;
         }
     }
@@ -289,6 +449,10 @@ export class RunController {
         this.abortController = new AbortController();
         this.duplicateGuard.reset();
         this.seenPostIds.clear();
+        this.rateLimitPacingCount = 0;
+        this.resumeSeedActive = false;
+        this.resumeWarmupDuplicatePages = 0;
+        this.resumeWarmupPages = 0;
 
         this.state.runId = normalizeRunId(this.state.runId + 1);
         this.state.step = 'DOWNLOADING';
@@ -301,14 +465,33 @@ export class RunController {
         this.logStore.clear();
     }
 
+    private prepareSeededResumeRun() {
+        this.abortController = new AbortController();
+        this.duplicateGuard.reset();
+        this.rateLimitPacingCount = 0;
+        this.resumeWarmupDuplicatePages = 0;
+        this.resumeWarmupPages = 0;
+
+        this.state.runId = normalizeRunId(this.state.runId + 1);
+        this.state.step = 'DOWNLOADING';
+        this.state.isStopManually = false;
+        this.state.error = null;
+        this.state.isOnLimit = false;
+        this.state.progress = createInitialProgress();
+        this.state.chunkState = createChunkState(this.state.runId);
+        this.state.posts = [];
+    }
+
     private prepareResumeRun() {
         this.abortController = new AbortController();
+        this.rateLimitPacingCount = 0;
+        this.resumeWarmupPages = 0;
         this.state.step = 'DOWNLOADING';
         this.state.isStopManually = false;
         this.state.error = null;
     }
 
-    private async runExportLoop(initialCursor: string | null = null): Promise<void> {
+    private async runExportLoop(initialCursor: string | null = null): Promise<RunLoopResult> {
         if (!this.abortController) {
             throw new Error('abort controller missing');
         }
@@ -317,7 +500,7 @@ export class RunController {
             fetchedCount: number,
             dedupedCount: number,
             dateFilter: DateFilterWindow,
-        ): boolean => {
+        ): RunLoopResult | null => {
             const loopCheck = this.duplicateGuard.evaluate({
                 allModeWithoutDateFilter: isAllModeWithoutDateFilter(this.state.settings, dateFilter),
                 dedupedCount,
@@ -325,10 +508,10 @@ export class RunController {
             });
             this.state.progress.duplicateStreak = loopCheck.streak;
             if (loopCheck.shouldStop) {
-                this.addLog('warn', `stop: duplicate-page loop detected (streak=${loopCheck.streak})`);
-                return true;
+                this.addLog('warn', `stop: reason=duplicate-loop streak=${loopCheck.streak}`);
+                return { reason: 'duplicate-loop' };
             }
-            return false;
+            return null;
         };
 
         const appendPageResults = (cursor: string | null, page: { nextCursor: string | null }, valid: RuntimePost[]) => {
@@ -350,6 +533,7 @@ export class RunController {
         let cursor: string | null = initialCursor;
         while (!this.state.isStopManually) {
             const dateFilter = computeDateFilterWindow(this.state.settings);
+            await this.applyRateLimitPacing('run');
 
             const page = await this.deps.queryPage({
                 cursor,
@@ -360,39 +544,111 @@ export class RunController {
             const fetched = page.posts;
             const { deduped, dedupedCount } = dedupeFetchedPosts(fetched, this.seenPostIds);
             this.addLog('info', `page(raw): fetched=${fetched.length} deduped=${deduped.length}`);
+            this.addDebugLog(
+                `page(debug): cursor=${formatCursor(cursor)} nextCandidate=${formatCursor(page.nextCursor ?? null)} fetched=${fetched.length} dedupedDropped=${dedupedCount}`,
+            );
 
-            if (shouldStopForDuplicateLoop(fetched.length, dedupedCount, dateFilter)) {
-                break;
+            if (deduped.length === 0) {
+                this.addDebugLog(`page(empty): fetched=${fetched.length} deduped=0`);
             }
 
-            const { valid, filteredOut, boundaryReached } = filterPostsForExport(deduped, dateFilter);
+            const warmupActive =
+                this.resumeSeedActive &&
+                this.state.settings.fetchingCountType === FETCH_MODE.ALL &&
+                !this.state.settings.isUsePostsFilter &&
+                this.state.progress.totalPosts === 0;
+
+            if (warmupActive) {
+                this.resumeWarmupPages += 1;
+                if (fetched.length > 0 && deduped.length === 0) {
+                    this.resumeWarmupDuplicatePages += 1;
+                    this.state.progress.duplicateStreak = this.resumeWarmupDuplicatePages;
+                    this.addLog(
+                        'info',
+                        `resume: warmup duplicate page=${this.resumeWarmupDuplicatePages} cursor=${formatCursor(cursor)}`,
+                    );
+                    if (this.resumeWarmupDuplicatePages >= RESUME_WARMUP_DUPLICATE_PAGE_LIMIT) {
+                        this.addLog(
+                            'warn',
+                            `resume: warmup stopped after ${RESUME_WARMUP_DUPLICATE_PAGE_LIMIT} duplicate pages`,
+                        );
+                        return { reason: 'duplicate-loop' };
+                    }
+                }
+                if (this.resumeWarmupPages >= RESUME_WARMUP_PAGE_LIMIT) {
+                    this.addLog('warn', `resume: warmup stopped after ${RESUME_WARMUP_PAGE_LIMIT} pages with no exportable posts`);
+                    return { reason: 'duplicate-loop' };
+                }
+            } else {
+                const duplicateStop = shouldStopForDuplicateLoop(fetched.length, dedupedCount, dateFilter);
+                if (duplicateStop) {
+                    return duplicateStop;
+                }
+            }
+
+            const { valid, filteredOut, boundaryReached, reasons } = filterPostsForExport(deduped, dateFilter);
             if (filteredOut > 0) {
                 this.addLog(
                     'info',
                     dateFilter.active
-                        ? `post: filtered non-text/attachments/out-of-range ${filteredOut}`
-                        : `post: filtered non-text/attachments ${filteredOut}`,
+                        ? `post: filtered non-text/out-of-range ${filteredOut}`
+                        : `post: filtered non-text ${filteredOut}`,
                 );
+            }
+            if (deduped.length > 0 || filteredOut > 0) {
+                this.addDebugLog(
+                    `page(filter): valid=${valid.length} filtered=${filteredOut} boundaryReached=${boundaryReached} cutoffMs=${dateFilter.cutoffMs}`,
+                );
+                if (filteredOut > 0) {
+                    this.addDebugLog(
+                        `page(filter-reasons): missingId=${reasons.missingId} emptyContent=${reasons.emptyContent} invalidCreatedAt=${reasons.invalidCreatedAt} outOfRange=${reasons.outOfRange}`,
+                    );
+                }
             }
 
             appendPageResults(cursor, page, valid);
+            if (valid.length > 0) {
+                this.addDebugLog(
+                    `page(window): firstId=${formatCursor(resolvePostId(valid[0]))} lastId=${formatCursor(resolvePostId(valid[valid.length - 1]))} firstCreatedAt=${toEpochMs(valid[0]?.createdAt)} lastCreatedAt=${toEpochMs(valid[valid.length - 1]?.createdAt)}`,
+                );
+            }
+
+            if (warmupActive && valid.length > 0) {
+                this.resumeSeedActive = false;
+                this.resumeWarmupDuplicatePages = 0;
+                this.resumeWarmupPages = 0;
+                this.addLog('info', `resume: warmup complete cursor=${formatCursor(cursor)}`);
+            }
 
             if (boundaryReached) {
-                this.addLog('info', `stop: reached date boundary days=${dateFilter.days}`);
-                break;
+                this.addLog('info', `stop: reason=date-boundary days=${dateFilter.days}`);
+                return { reason: 'date-boundary' };
             }
 
             if (this.applyPostCountLimitIfNeeded()) {
-                break;
+                this.addLog(
+                    'info',
+                    `stop: reason=post-count-limit limit=${this.state.settings.fetchingCountByPostCountValue} total=${this.state.progress.totalPosts}`,
+                );
+                return { reason: 'post-count-limit' };
             }
 
             await this.flushChunksIfNeeded();
 
             if (!page.nextCursor) {
-                break;
+                const lastFetchedId = resolvePostId(fetched[fetched.length - 1]);
+                const lastValidId = resolvePostId(valid[valid.length - 1]);
+                this.addLog(
+                    'info',
+                    `stop: reason=no-next-cursor cursor=${formatCursor(cursor)} fetched=${fetched.length} valid=${valid.length} lastFetchedId=${formatCursor(lastFetchedId)} lastValidId=${formatCursor(lastValidId)}`,
+                );
+                return { reason: 'no-next-cursor' };
             }
             cursor = page.nextCursor;
         }
+
+        this.addLog('info', 'stop: reason=manual-stop');
+        return { reason: 'manual-stop' };
     }
 
     private applyPostCountLimitIfNeeded(): boolean {
@@ -452,6 +708,7 @@ export class RunController {
             this.addLog('warn', 'run: no next cursor to continue');
             return;
         }
+        this.addLog('info', `run: continue from cursor=${formatCursor(cursor)}`);
         this.state.isOnLimit = false;
         this.state.step = 'DOWNLOADING';
         await this.start({ cursor, resume: true });
@@ -513,6 +770,43 @@ export class RunController {
         this.addLog('info', `download: direct posts.json path=${targetFilename}`);
     }
 
+    async downloadJsonRedacted() {
+        const envelope = buildExportEnvelope(this.state.posts);
+        const redacted = {
+            ...envelope,
+            debug: {
+                chunked: this.state.chunkState.partFiles.length > 0,
+                partFiles: [...this.state.chunkState.partFiles],
+                progress: { ...this.state.progress },
+                settings: { ...this.state.settings },
+                totalFlushed: this.state.chunkState.totalFlushed,
+            },
+            posts: envelope.posts.map((post) => {
+                const next = redactContentForDebug(post.content);
+                return {
+                    ...post,
+                    content: next.content,
+                    contentLength: next.contentLength,
+                    redacted: next.redacted,
+                };
+            }),
+        };
+        const targetFilename = this.resolveDownloadFilename('posts-redacted.json');
+        await this.deps.downloadClient.downloadTextAsFile(
+            JSON.stringify(redacted, null, 2),
+            targetFilename,
+            'application/json',
+            false,
+        );
+        if (this.state.chunkState.partFiles.length > 0) {
+            this.addLog(
+                'warn',
+                `download: redacted export includes buffered posts only (chunk parts=${this.state.chunkState.partFiles.length})`,
+            );
+        }
+        this.addLog('info', `download: redacted posts path=${targetFilename}`);
+    }
+
     async downloadLogsJson() {
         const filename = this.resolveDownloadFilename(`logs-${Date.now()}.json`);
         await this.deps.downloadClient.downloadTextAsFile(
@@ -522,6 +816,202 @@ export class RunController {
             false,
         );
         this.addLog('info', 'logs: downloaded json');
+    }
+
+    async resumeFromImportedPayloads(payloads: unknown[]) {
+        if (this.state.step === 'DOWNLOADING') {
+            this.addLog('warn', 'resume: cannot import while a run is active');
+            return;
+        }
+
+        const imported = this.importKnownPostIds(payloads);
+        if (imported.knownIds === 0) {
+            this.addLog('warn', 'resume: no valid post ids found in imported payloads');
+            return;
+        }
+
+        this.resumeSeedActive = true;
+        this.resumeWarmupDuplicatePages = 0;
+        this.resumeWarmupPages = 0;
+        this.addLog(
+            'info',
+            `resume: imported known post ids=${imported.knownIds} from posts=${imported.posts} payloads=${imported.payloads}`,
+        );
+        await this.start({ seededResume: true });
+    }
+
+    logEarliestVisiblePost() {
+        const sanitized = this.state.posts
+            .map((post) => sanitizeExportPost(post))
+            .filter((post): post is NonNullable<typeof post> => Boolean(post));
+
+        if (sanitized.length === 0) {
+            this.addLog('warn', 'probe: earliest-visible-post none');
+            return;
+        }
+
+        let earliest = sanitized[sanitized.length - 1]!;
+        for (const post of sanitized) {
+            const candidate = toEpochMs(post.createdAt);
+            const current = toEpochMs(earliest.createdAt);
+            if (candidate > 0 && (current <= 0 || candidate < current)) {
+                earliest = post;
+            }
+        }
+
+        this.addLog(
+            'info',
+            `probe: earliest-visible-post id=${earliest.id} createdAt=${toEpochMs(earliest.createdAt)} totalPosts=${sanitized.length}`,
+        );
+    }
+
+    async probeEarliestAccessiblePost() {
+        if (this.probeTask) {
+            this.addLog('warn', 'probe: already running');
+            return;
+        }
+
+        this.probeStopRequested = false;
+        this.probeTask = this.runProbeEarliestAccessiblePost().finally(() => {
+            this.probePageAbortController = null;
+            this.probeTask = null;
+            this.probeStopRequested = false;
+        });
+        await this.probeTask;
+    }
+
+    stopProbe() {
+        if (!this.probeTask) {
+            this.addLog('warn', 'probe: no active probe');
+            return;
+        }
+        this.probeStopRequested = true;
+        this.probePageAbortController?.abort();
+        this.addLog('info', 'probe: stop requested');
+    }
+
+    private async runProbeEarliestAccessiblePost() {
+        await this.loadCalibrationStatus();
+        if (this.state.calibrationStatus !== 'ready') {
+            this.addLog('warn', 'probe: calibration required');
+            return;
+        }
+
+        this.addLog('info', 'probe: start earliest-accessible-post');
+        this.addLog('info', `probe: settings requestDelayMs=${this.state.settings.requestDelay}`);
+        if (this.state.settings.requestDelay <= 0) {
+            this.addLog('warn', 'probe: requestDelay is 0; probing may increase rate-limit risk');
+        }
+
+        const probeGuard = createDuplicatePageGuard(5);
+        const probeSeen = new Set<string>();
+        let cursor: string | null = null;
+        let pages = 0;
+        let earliest: { id: string; createdAt: number } | null = null;
+        const PAGE_TIMEOUT_MS = 20_000;
+
+        while (true) {
+            if (this.probeStopRequested) {
+                this.addLog('info', `probe: stop manual pages=${pages}`);
+                break;
+            }
+
+            const shouldContinue = await this.applyRateLimitPacing('probe');
+            if (!shouldContinue) {
+                this.addLog('info', `probe: stop manual pages=${pages}`);
+                break;
+            }
+
+            this.addLog('info', `probe: requesting page=${pages + 1} cursor=${formatCursor(cursor)}`);
+            const controller = new AbortController();
+            this.probePageAbortController = controller;
+            let page: Awaited<ReturnType<typeof this.deps.queryPage>>;
+            let timedOut = false;
+            const timeoutController = setTimeout(() => {
+                timedOut = true;
+                controller.abort();
+            }, PAGE_TIMEOUT_MS);
+            try {
+                page = await this.deps.queryPage({
+                    cursor,
+                    settings: this.state.settings,
+                    signal: controller.signal,
+                });
+            } catch (error) {
+                const details = String(error instanceof Error ? error.message : error);
+                if (this.probeStopRequested) {
+                    this.addLog('info', `probe: stop manual pages=${pages}`);
+                    break;
+                }
+                if (timedOut) {
+                    this.addLog(
+                        'error',
+                        `probe: page timeout page=${pages + 1} cursor=${formatCursor(cursor)} timeoutMs=${PAGE_TIMEOUT_MS}`,
+                    );
+                    return;
+                }
+                this.addLog(
+                    'error',
+                    `probe: page request failed page=${pages + 1} cursor=${formatCursor(cursor)} error=${details}`,
+                );
+                return;
+            } finally {
+                clearTimeout(timeoutController);
+                this.probePageAbortController = null;
+            }
+            pages += 1;
+            this.addLog(
+                'info',
+                `probe: page result page=${pages} fetched=${page.posts.length} next=${formatCursor(page.nextCursor ?? null)}`,
+            );
+
+            const { deduped, dedupedCount } = dedupeFetchedPosts(page.posts, probeSeen);
+            const loopCheck = probeGuard.evaluate({
+                allModeWithoutDateFilter: true,
+                dedupedCount,
+                fetchedCount: page.posts.length,
+            });
+            if (loopCheck.shouldStop) {
+                this.addLog('warn', `probe: stop duplicate-loop pages=${pages} streak=${loopCheck.streak}`);
+                break;
+            }
+
+            let pageSanitized = 0;
+            for (const post of deduped) {
+                const sanitized = sanitizeExportPost(post);
+                if (!sanitized) {
+                    continue;
+                }
+                pageSanitized += 1;
+                const createdAt = toEpochMs(post.createdAt ?? sanitized.createdAt);
+                if (createdAt <= 0) {
+                    continue;
+                }
+                if (!earliest || createdAt < earliest.createdAt) {
+                    earliest = { createdAt, id: sanitized.id };
+                }
+            }
+            this.addLog(
+                'info',
+                `probe: page processed page=${pages} deduped=${deduped.length} sanitized=${pageSanitized} earliestId=${earliest?.id ?? 'none'}`,
+            );
+
+            if (!page.nextCursor) {
+                this.addLog('info', `probe: stop no-next-cursor pages=${pages} cursor=${formatCursor(cursor)}`);
+                break;
+            }
+            cursor = page.nextCursor;
+        }
+
+        if (!earliest) {
+            this.addLog('warn', `probe: earliest-accessible-post none pages=${pages}`);
+            return;
+        }
+
+        this.addLog(
+            'info',
+            `probe: earliest-accessible-post id=${earliest.id} createdAt=${earliest.createdAt} pages=${pages}`,
+        );
     }
 
     private resolveCurrentUrl(): string {
@@ -646,5 +1136,110 @@ export class RunController {
 
     private sleep(ms: number): Promise<void> {
         return new Promise((resolve) => setTimeout(resolve, Math.max(0, ms)));
+    }
+
+    private importKnownPostIds(payloads: unknown[]): { knownIds: number; payloads: number; posts: number } {
+        const knownIds = new Set<string>();
+        let payloadCount = 0;
+        let postCount = 0;
+
+        for (const payload of payloads) {
+            const posts = this.extractPostsFromPayload(payload);
+            if (posts.length === 0) {
+                continue;
+            }
+            payloadCount += 1;
+            for (const post of posts) {
+                postCount += 1;
+                const sanitized = sanitizeExportPost(post);
+                if (!sanitized) {
+                    continue;
+                }
+                knownIds.add(sanitized.id);
+            }
+        }
+
+        for (const id of knownIds) {
+            this.seenPostIds.add(id);
+        }
+
+        return {
+            knownIds: knownIds.size,
+            payloads: payloadCount,
+            posts: postCount,
+        };
+    }
+
+    private extractPostsFromPayload(payload: unknown): unknown[] {
+        if (Array.isArray(payload)) {
+            return payload;
+        }
+        if (!payload || typeof payload !== 'object') {
+            return [];
+        }
+        const data = payload as Record<string, unknown>;
+        if (Array.isArray(data.posts)) {
+            return data.posts;
+        }
+        return [];
+    }
+
+    private async applyRateLimitPacing(context: 'run' | 'probe'): Promise<boolean> {
+        if (context === 'probe' && this.probeStopRequested) {
+            return false;
+        }
+
+        this.rateLimitPacingCount += 1;
+
+        const baseDelayMs = Math.max(0, Math.floor(this.state.settings.requestDelay));
+        if (baseDelayMs > 0) {
+            this.addLog('info', `rate-limit: base wait=${baseDelayMs}ms reason=configured-requestDelay`);
+            if (context === 'probe') {
+                const shouldContinue = await this.sleepProbeDelay(baseDelayMs);
+                if (!shouldContinue) {
+                    return false;
+                }
+            } else {
+                await this.sleep(baseDelayMs);
+            }
+        }
+
+        const randomWaitRawMs = Math.ceil(
+            Math.random() * (this.rateLimitPacingCount * RATE_LIMIT_RANDOM_WAIT_STRETCH_MS + RATE_LIMIT_RANDOM_WAIT_BASE_MS) +
+                RATE_LIMIT_RANDOM_WAIT_MIN_MS,
+        );
+        if (randomWaitRawMs > RATE_LIMIT_RANDOM_WAIT_MAX_MS) {
+            this.rateLimitPacingCount = 0;
+            return true;
+        }
+        if (randomWaitRawMs < RATE_LIMIT_RANDOM_WAIT_LOG_THRESHOLD_MS) {
+            return true;
+        }
+
+        const waitSeconds = (randomWaitRawMs / 1000).toFixed(1);
+        this.addLog(
+            'warn',
+            `rate-limit: pacing wait=${waitSeconds}s reason=avoid account restrictions pageCount=${this.rateLimitPacingCount}`,
+        );
+
+        if (context === 'probe') {
+            return await this.sleepProbeDelay(randomWaitRawMs);
+        }
+
+        await this.sleep(randomWaitRawMs);
+        return true;
+    }
+
+    private async sleepProbeDelay(ms: number): Promise<boolean> {
+        let remaining = Math.max(0, Math.floor(ms));
+        while (remaining > 0) {
+            if (this.probeStopRequested) {
+                return false;
+            }
+            const chunk = Math.min(remaining, 250);
+            await this.sleep(chunk);
+            remaining -= chunk;
+        }
+        return !this.probeStopRequested;
     }
 }

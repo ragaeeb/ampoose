@@ -9,6 +9,7 @@ type GraphqlRequester = {
 
 type QueryInput = {
     cursor: string | null;
+    signal?: AbortSignal;
 };
 
 type TimelinePage = {
@@ -100,6 +101,39 @@ function firstPath(source: unknown, paths: string[]): unknown {
         }
     }
     return undefined;
+}
+
+function collectPageInfoCandidatesDeep(source: unknown): unknown[] {
+    const candidates: unknown[] = [];
+    const visited = new Set<unknown>();
+
+    const walk = (value: unknown) => {
+        if (!value || typeof value !== 'object') {
+            return;
+        }
+        if (visited.has(value)) {
+            return;
+        }
+        visited.add(value);
+
+        if (isRecord(value) && 'has_next_page' in value && 'end_cursor' in value) {
+            candidates.push(value);
+        }
+
+        if (Array.isArray(value)) {
+            for (const entry of value) {
+                walk(entry);
+            }
+            return;
+        }
+
+        for (const entry of Object.values(value)) {
+            walk(entry);
+        }
+    };
+
+    walk(source);
+    return candidates;
 }
 
 function normalizeString(value: unknown): string {
@@ -256,23 +290,23 @@ function collectTimelineNodes(payload: unknown): unknown[] {
 }
 
 function findFirstPageInfoCandidate(payloads: unknown[]): unknown {
-    const firstPayload = payloads[0];
-    const direct =
-        (firstPayload &&
-            firstPath(firstPayload, ['data.page_info', 'data.node.timeline_list_feed_units.page_info'])) ??
-        undefined;
-    if (direct) {
-        return direct;
-    }
+    const pathCandidates = payloads
+        .map((payload) => firstPath(payload, ['data.page_info', 'data.node.timeline_list_feed_units.page_info']))
+        .filter((value) => value !== undefined && value !== null);
+    const deepCandidates = payloads.flatMap((payload) => collectPageInfoCandidatesDeep(payload));
+    const candidates = [...pathCandidates, ...deepCandidates];
 
-    for (const payload of payloads) {
-        const found = firstPath(payload, ['data.page_info', 'data.node.timeline_list_feed_units.page_info']);
-        if (found) {
-            return found;
+    for (const candidate of candidates) {
+        if (!isRecord(candidate)) {
+            continue;
+        }
+        const endCursor = normalizeString(candidate.end_cursor);
+        if (Boolean(candidate.has_next_page) && Boolean(endCursor)) {
+            return candidate;
         }
     }
 
-    return undefined;
+    return candidates[0];
 }
 
 function normalizePageInfo(candidate: unknown): { endCursor: string | null; hasNextPage: boolean } {
@@ -363,8 +397,13 @@ export async function queryProfileTimelinePage(client: GraphqlRequester, input: 
               queryName: TIMELINE_QUERY_NAME,
               responseMode: 'all',
               variables: { cursor: input.cursor },
+              ...(input.signal ? { signal: input.signal } : {}),
           }
-        : { queryName: TIMELINE_QUERY_NAME, responseMode: 'all' };
+        : {
+              queryName: TIMELINE_QUERY_NAME,
+              responseMode: 'all',
+              ...(input.signal ? { signal: input.signal } : {}),
+          };
     const response = await client.request(requestInput);
     const page = extractTimelinePageFromResponse(response);
     if (page.posts.length === 0 && !page.nextCursor) {

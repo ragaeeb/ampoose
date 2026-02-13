@@ -1,10 +1,10 @@
 import { describe, expect, it, mock } from 'bun:test';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createChunkState } from '@/domain/chunk/chunking';
-import { createInitialProgress } from '@/runtime/state/runState';
-import { createDefaultSettings, FETCH_MODE } from '@/runtime/settings/types';
 import type { ControllerState } from '@/runtime/controller/types';
+import { createDefaultSettings, FETCH_MODE } from '@/runtime/settings/types';
+import { createInitialProgress } from '@/runtime/state/runState';
 import { App } from '@/ui/App';
 
 function makeState(patch: Partial<ControllerState> = {}): ControllerState {
@@ -127,9 +127,7 @@ describe('App', () => {
             />,
         );
 
-        expect(
-            screen.getByText(/complete calibration first\. export controls are hidden/i),
-        ).toBeTruthy();
+        expect(screen.getByText(/complete calibration first\. export controls are hidden/i)).toBeTruthy();
 
         const user = userEvent.setup();
         await user.click(screen.getByRole('button', { name: /start calibration/i }));
@@ -248,7 +246,7 @@ describe('App', () => {
 
         const { rerender } = render(
             <App
-                state={makeState({ calibrationStatus: 'ready', step: 'START', open: true })}
+                state={makeState({ calibrationStatus: 'ready', open: true, step: 'START' })}
                 onOpen={onOpen}
                 onStart={onStart}
                 onStop={onStop}
@@ -270,7 +268,7 @@ describe('App', () => {
 
         rerender(
             <App
-                state={makeState({ calibrationStatus: 'ready', step: 'DOWNLOADING', isOnLimit: false, open: true })}
+                state={makeState({ calibrationStatus: 'ready', isOnLimit: false, open: true, step: 'DOWNLOADING' })}
                 onOpen={onOpen}
                 onStart={onStart}
                 onStop={onStop}
@@ -292,7 +290,7 @@ describe('App', () => {
 
         rerender(
             <App
-                state={makeState({ calibrationStatus: 'ready', step: 'DOWNLOADING', isOnLimit: true, open: true })}
+                state={makeState({ calibrationStatus: 'ready', isOnLimit: true, open: true, step: 'DOWNLOADING' })}
                 onOpen={onOpen}
                 onStart={onStart}
                 onStop={onStop}
@@ -314,7 +312,7 @@ describe('App', () => {
 
         rerender(
             <App
-                state={makeState({ calibrationStatus: 'ready', step: 'DONE', open: true })}
+                state={makeState({ calibrationStatus: 'ready', open: true, step: 'DONE' })}
                 onOpen={onOpen}
                 onStart={onStart}
                 onStop={onStop}
@@ -331,8 +329,8 @@ describe('App', () => {
             />,
         );
 
-        await user.click(screen.getByRole('button', { name: /^close$/i }));
-        expect(onOpen).toHaveBeenCalledWith(false);
+        await user.click(screen.getByRole('button', { name: /start again/i }));
+        expect(onStart).toHaveBeenCalledTimes(2);
     });
 
     it('should show error banner and compact long cursor values in logs', () => {
@@ -396,8 +394,42 @@ describe('App', () => {
         expect(onCalibrationStart).toHaveBeenCalledTimes(1);
     });
 
-    it('should invoke JSON and Logs download actions', async () => {
+    it('should offer recalibrate action on graphql retry failures', async () => {
+        const onCalibrationStart = mock(() => {});
+        render(
+            <App
+                state={makeState({
+                    calibrationStatus: 'ready',
+                    error: 'GraphQL request failed after retries. endpoint=/api/graphql/ params=19 error=GraphQL request failed: 500',
+                    step: 'DONE',
+                })}
+                onOpen={mock(() => {})}
+                onStart={mock(async () => {})}
+                onStop={mock(() => {})}
+                onContinue={mock(async () => {})}
+                onDownload={mock(async () => {})}
+                onDownloadLogs={mock(async () => {})}
+                onSetMode={mock(() => {})}
+                onSetCount={mock(() => {})}
+                onSetDays={mock(() => {})}
+                onSetUseDateFilter={mock(() => {})}
+                onCalibrationStart={onCalibrationStart}
+                onCalibrationStop={mock(() => {})}
+                onCalibrationSave={mock(async () => {})}
+            />,
+        );
+
+        const user = userEvent.setup();
+        const recalibrateButtons = screen.getAllByRole('button', { name: /^recalibrate$/i });
+        await user.click(recalibrateButtons[0]!);
+        expect(onCalibrationStart).toHaveBeenCalledTimes(1);
+    });
+
+    it('should invoke JSON, JSON redacted, and Logs download actions', async () => {
         const onDownload = mock(async () => {
+            throw new Error('expected test rejection');
+        });
+        const onDownloadRedacted = mock(async () => {
             throw new Error('expected test rejection');
         });
         const onDownloadLogs = mock(async () => {
@@ -412,6 +444,7 @@ describe('App', () => {
                 onStop={mock(() => {})}
                 onContinue={mock(async () => {})}
                 onDownload={onDownload}
+                onDownloadRedacted={onDownloadRedacted}
                 onDownloadLogs={onDownloadLogs}
                 onSetMode={mock(() => {})}
                 onSetCount={mock(() => {})}
@@ -425,9 +458,79 @@ describe('App', () => {
 
         const user = userEvent.setup();
         await user.click(screen.getByRole('button', { name: /^json$/i }));
+        await user.click(screen.getByRole('button', { name: /^json \(redacted\)$/i }));
         await user.click(screen.getByRole('button', { name: /^logs$/i }));
 
         expect(onDownload).toHaveBeenCalledTimes(1);
+        expect(onDownloadRedacted).toHaveBeenCalledTimes(1);
         expect(onDownloadLogs).toHaveBeenCalledTimes(1);
+    });
+
+    it('should invoke earliest probe and stop probe actions', async () => {
+        let resolveProbe: (() => void) | null = null;
+        const onProbeEarliestPost = mock(
+            () =>
+                new Promise<void>((resolve) => {
+                    resolveProbe = resolve;
+                }),
+        );
+        const onStopProbe = mock(() => {});
+        render(
+            <App
+                state={makeState({ calibrationStatus: 'ready', step: 'DONE' })}
+                onOpen={mock(() => {})}
+                onStart={mock(async () => {})}
+                onStop={mock(() => {})}
+                onContinue={mock(async () => {})}
+                onDownload={mock(async () => {})}
+                onDownloadLogs={mock(async () => {})}
+                onProbeEarliestPost={onProbeEarliestPost}
+                onStopProbe={onStopProbe}
+                onSetMode={mock(() => {})}
+                onSetCount={mock(() => {})}
+                onSetDays={mock(() => {})}
+                onSetUseDateFilter={mock(() => {})}
+                onCalibrationStart={mock(() => {})}
+                onCalibrationStop={mock(() => {})}
+                onCalibrationSave={mock(async () => {})}
+            />,
+        );
+
+        const user = userEvent.setup();
+        await user.click(screen.getByRole('button', { name: /probe earliest/i }));
+        await user.click(screen.getByRole('button', { name: /stop probe/i }));
+        await act(async () => {
+            resolveProbe?.();
+            await Promise.resolve();
+        });
+        expect(onProbeEarliestPost).toHaveBeenCalledTimes(1);
+        expect(onStopProbe).toHaveBeenCalledTimes(1);
+    });
+
+    it('should invoke resume import action', async () => {
+        const onImportResumeJson = mock(async () => {});
+        render(
+            <App
+                state={makeState({ calibrationStatus: 'ready', step: 'DONE' })}
+                onOpen={mock(() => {})}
+                onStart={mock(async () => {})}
+                onStop={mock(() => {})}
+                onContinue={mock(async () => {})}
+                onDownload={mock(async () => {})}
+                onDownloadLogs={mock(async () => {})}
+                onImportResumeJson={onImportResumeJson}
+                onSetMode={mock(() => {})}
+                onSetCount={mock(() => {})}
+                onSetDays={mock(() => {})}
+                onSetUseDateFilter={mock(() => {})}
+                onCalibrationStart={mock(() => {})}
+                onCalibrationStop={mock(() => {})}
+                onCalibrationSave={mock(async () => {})}
+            />,
+        );
+
+        const user = userEvent.setup();
+        await user.click(screen.getByRole('button', { name: /^resume$/i }));
+        expect(onImportResumeJson).toHaveBeenCalledTimes(1);
     });
 });

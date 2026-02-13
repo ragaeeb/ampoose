@@ -1,6 +1,6 @@
 import { expect, it } from 'bun:test';
 import { Window } from 'happy-dom';
-import { createCalibrationCaptureManager } from '../../src/runtime/calibration/capture';
+import { createCalibrationCaptureManager } from '@/runtime/calibration/capture';
 
 it('should record required query docIds from graphql requests', async () => {
     const windowObj = new Window({ url: 'https://www.facebook.com/' });

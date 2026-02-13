@@ -1,5 +1,5 @@
 import { expect, it } from 'bun:test';
-import { extractTimelinePageFromResponse, queryProfileTimelinePage } from '../../src/runtime/query/profileTimeline';
+import { extractTimelinePageFromResponse, queryProfileTimelinePage } from '@/runtime/query/profileTimeline';
 
 it('should extract posts and next cursor from feed edges payload', () => {
     const response = {
@@ -136,6 +136,94 @@ it('should handle streamed payload arrays (node chunks + page_info chunk)', () =
     expect(page.posts[0]?.post_id).toBe('post-1');
 });
 
+it('should prefer a later page_info candidate with next cursor in streamed payloads', () => {
+    const streamedPayload = [
+        {
+            data: {
+                page_info: {
+                    end_cursor: null,
+                    has_next_page: false,
+                },
+            },
+        },
+        {
+            data: {
+                node: {
+                    timeline_list_feed_units: {
+                        edges: [
+                            {
+                                node: {
+                                    comet_sections: {
+                                        content: {
+                                            story: {
+                                                message: { text: 'post with newer cursor chunk' },
+                                            },
+                                        },
+                                    },
+                                    id: 'story-2',
+                                    post_id: 'post-2',
+                                },
+                            },
+                        ],
+                        page_info: {
+                            end_cursor: 'cursor-newer',
+                            has_next_page: true,
+                        },
+                    },
+                },
+            },
+        },
+    ];
+
+    const page = extractTimelinePageFromResponse(streamedPayload);
+    expect(page.nextCursor).toBe('cursor-newer');
+    expect(page.posts.map((post) => post.post_id)).toEqual(['post-2']);
+});
+
+it('should resolve next cursor from deep page_info location when path-based lookup misses', () => {
+    const streamedPayload = [
+        {
+            data: {
+                node: {
+                    timeline_list_feed_units: {
+                        edges: [
+                            {
+                                node: {
+                                    comet_sections: {
+                                        content: {
+                                            story: {
+                                                message: { text: 'deep cursor post' },
+                                            },
+                                        },
+                                    },
+                                    id: 'story-deep',
+                                    post_id: 'post-deep',
+                                },
+                            },
+                        ],
+                    },
+                },
+            },
+        },
+        {
+            data: {
+                viewer: {
+                    pagination: {
+                        page_info: {
+                            end_cursor: 'cursor-deep',
+                            has_next_page: true,
+                        },
+                    },
+                },
+            },
+        },
+    ];
+
+    const page = extractTimelinePageFromResponse(streamedPayload);
+    expect(page.nextCursor).toBe('cursor-deep');
+    expect(page.posts.map((post) => post.post_id)).toEqual(['post-deep']);
+});
+
 it('should send calibrated query name and cursor override', async () => {
     const requests: Array<{
         queryName: string;
@@ -169,6 +257,31 @@ it('should send calibrated query name and cursor override', async () => {
         },
     ]);
     expect(page).toEqual({ nextCursor: null, posts: [] });
+});
+
+it('should forward abort signal to graphql request input', async () => {
+    const requests: Array<Record<string, unknown>> = [];
+    const controller = new AbortController();
+    await queryProfileTimelinePage(
+        {
+            request: async (input) => {
+                requests.push(input as Record<string, unknown>);
+                return {
+                    data: {
+                        node: {
+                            timeline_list_feed_units: {
+                                edges: [],
+                                page_info: { end_cursor: null, has_next_page: false },
+                            },
+                        },
+                    },
+                };
+            },
+        },
+        { cursor: null, signal: controller.signal },
+    );
+
+    expect(requests[0]?.signal).toBe(controller.signal);
 });
 
 it('should throw when GraphQL errors are returned without page data', async () => {

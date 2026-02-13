@@ -47,6 +47,10 @@ export default defineConfig({
         },
     },
     manifest: {
+        action: {
+            default_popup: 'popup.html',
+            default_title: 'Ampoose',
+        },
         description,
         icons: {
             '16': 'src/assets/logo/favicon-16.png',

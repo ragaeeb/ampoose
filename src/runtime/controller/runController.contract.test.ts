@@ -1,7 +1,7 @@
 import { expect, it } from 'bun:test';
-import { buildGraphqlArtifact } from '../../src/domain/calibration/artifact';
-import { RunController } from '../../src/runtime/controller/runController';
-import { FETCH_MODE } from '../../src/runtime/settings/types';
+import { buildGraphqlArtifact } from '@/domain/calibration/artifact';
+import { RunController } from '@/runtime/controller/runController';
+import { FETCH_MODE } from '@/runtime/settings/types';
 
 const createReadyArtifact = () => {
     return buildGraphqlArtifact({

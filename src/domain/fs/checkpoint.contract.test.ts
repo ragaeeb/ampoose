@@ -1,5 +1,5 @@
 import { expect, it } from 'bun:test';
-import { buildFsSessionCheckpoint } from '../../src/domain/fs/checkpoint';
+import { buildFsSessionCheckpoint } from '@/domain/fs/checkpoint';
 
 it('should match fs checkpoint contract', () => {
     const checkpoint = buildFsSessionCheckpoint({

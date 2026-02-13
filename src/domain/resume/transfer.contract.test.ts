@@ -1,5 +1,5 @@
 import { expect, it } from 'bun:test';
-import { buildResumeTransferPayload, normalizeImportedResumePayload } from '../../src/domain/resume/transfer';
+import { buildResumeTransferPayload, normalizeImportedResumePayload } from '@/domain/resume/transfer';
 
 it('should match resume payload contract', () => {
     const payload = buildResumeTransferPayload(

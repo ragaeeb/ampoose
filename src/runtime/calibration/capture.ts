@@ -3,12 +3,16 @@ import type { GraphqlArtifactEntry, GraphqlArtifactV1 } from '@/domain/types';
 
 type CaptureMap = Map<string, GraphqlArtifactEntry>;
 const SENSITIVE_REQUEST_KEYS = new Set([
-    'access_token',
-    'session_id',
     '__a',
+    '__comet_req',
     '__csr',
     '__req',
     '__s',
+    'fb_dtsg',
+    'jazoest',
+    'lsd',
+    'access_token',
+    'session_id',
     '__user',
 ]);
 const VARIABLE_STRIP_KEYS = new Set([

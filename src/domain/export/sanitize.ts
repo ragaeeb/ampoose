@@ -47,9 +47,6 @@ export function shouldExportPost(value: unknown): boolean {
     if (!content) {
         return false;
     }
-    if (hasPostAttachments(value)) {
-        return false;
-    }
     return true;
 }
 

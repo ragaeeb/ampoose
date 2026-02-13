@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'bun:test';
 
-const CSS_PATH = new URL('../../src/ui/styles.css', import.meta.url);
+const CSS_PATH = new URL('./styles.css', import.meta.url);
 
 describe('UI styles regression', () => {
     it('should define design tokens on :host so CSS variables work inside the shadow root', async () => {
@@ -16,4 +16,3 @@ describe('UI styles regression', () => {
         expect(css).not.toMatch(/--font-family-mono:\s*'/);
     });
 });
-

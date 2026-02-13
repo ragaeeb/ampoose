@@ -34,6 +34,7 @@ The runtime is Ampoose-owned and does not rely on upstream bundles.
 
 ## Coding Standards
 - **Tests**: All unit tests must use the `it('should ...')` convention.
+- **Test location**: Keep tests colocated with implementation files under `src/` (for example `foo.ts` with `foo.test.ts`). Do not add new tests under a top-level `tests/` folder.
 - **TypeScript**: Prefer inferred return types for functions whenever possible (avoid explicit `: Type` unless necessary).
 - **Functions**: Prefer arrow functions (`const foo = () => {}`) over classical `function foo() {}` declarations.
 

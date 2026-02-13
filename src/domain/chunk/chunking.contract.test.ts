@@ -1,5 +1,5 @@
 import { expect, it } from 'bun:test';
-import { buildChunkIndex, createChunkState, flushPostsChunk, getChunkSignature } from '../../src/domain/chunk/chunking';
+import { buildChunkIndex, createChunkState, flushPostsChunk, getChunkSignature } from '@/domain/chunk/chunking';
 
 
 const createPosts = (count: number) => {

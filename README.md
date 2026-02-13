@@ -34,25 +34,27 @@ Private WXT + React successor for Ampoose.
 - Duplicate-loop guard stops after 5 fully duplicate pages.
 - Download path is namespaced:
   - `~/Downloads/Ampoose/<username-or-id>/...`
+- Resume support from previously exported JSON parts.
+- Probe mode to detect earliest accessible post without writing export files.
+- Popup includes log-level control for runtime verbosity.
 
 ## Project Layout
 
 ```
-ampoose-wxt/
+ampoose/
 ├── src/
 │   ├── entrypoints/
 │   │   ├── background.ts
 │   │   ├── content.tsx
-│   │   └── main-world.ts
+│   │   └── main-world.content.ts
 │   ├── ui/
 │   ├── runtime/
 │   └── domain/
 ├── public/src/assets/logo/
 ├── tests/legacy-parity/
 └── docs/
-    ├── migration-status.md
-    ├── manual-smoke-checklist.md
-    └── CHANGELOG.md
+    ├── chrome-web-store-submission.md
+    └── privacy-policy.md
 ```
 
 ## Commands
@@ -64,15 +66,7 @@ ampoose-wxt/
 - `bun run test:coverage`
 - `bun run check`
 
-## Testing Gate
-
-1. `bun run test`
-2. `bun run check`
-3. `bun run build`
-4. Execute `docs/manual-smoke-checklist.md` before release
-
 ## Documentation
 
-- `docs/migration-status.md` — migration progress and validation notes.
-- `docs/manual-smoke-checklist.md` — manual release gate.
-- `docs/CHANGELOG.md` — shipped change history.
+- `docs/chrome-web-store-submission.md` — listing, permissions, and CWS scope notes.
+- `docs/privacy-policy.md` — extension privacy disclosure.

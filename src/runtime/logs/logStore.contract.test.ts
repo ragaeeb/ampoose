@@ -1,5 +1,5 @@
 import { expect, it } from 'bun:test';
-import { LOG_PAYLOAD_LIMIT, LOG_STORE_LIMIT, LogStore, normalizeLogPayload } from '../../src/runtime/logs/logStore';
+import { LOG_PAYLOAD_LIMIT, LOG_STORE_LIMIT, LogStore, normalizeLogPayload } from '@/runtime/logs/logStore';
 
 it('should enforce log store size cap', () => {
     const store = new LogStore();

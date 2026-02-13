@@ -1,5 +1,6 @@
 import type { ReactNode, RefObject } from 'react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { shouldSuggestRecalibrationFromError } from '@/runtime/controller/errorHints';
 import type { ControllerState } from '@/runtime/controller/types';
 import { FETCH_MODE, type FetchingCountType } from '@/runtime/settings/types';
 import './styles.css';
@@ -11,7 +12,11 @@ export type AppProps = {
     onStop: () => void;
     onContinue: () => Promise<void>;
     onDownload: () => Promise<void>;
+    onDownloadRedacted?: () => Promise<void>;
     onDownloadLogs: () => Promise<void>;
+    onProbeEarliestPost?: () => Promise<void>;
+    onStopProbe?: () => void;
+    onImportResumeJson?: () => Promise<void>;
     onSetMode: (mode: FetchingCountType) => void;
     onSetCount: (count: number) => void;
     onSetDays: (days: number) => void;
@@ -95,7 +100,7 @@ function getPrimaryText(step: ControllerState['step'], isOnLimit: boolean): stri
     if (step === 'DOWNLOADING') {
         return isOnLimit ? 'Continue' : 'Stop';
     }
-    return 'Close';
+    return 'Start Again';
 }
 
 function Pill({
@@ -163,14 +168,25 @@ function ModalHeader({ onClose }: { onClose: () => void }) {
         <div className="modal-header">
             <h3>Ampoose</h3>
             <button type="button" onClick={onClose} className="modal-header-close">
-                ×
+                <span className="modal-header-close-icon" aria-hidden="true">
+                    ×
+                </span>
             </button>
         </div>
     );
 }
 
-function ErrorBanner({ error }: { error: string }) {
-    return <div className="error-banner">{error}</div>;
+function ErrorBanner({ error, onRecalibrate }: { error: string; onRecalibrate?: () => void }) {
+    return (
+        <div className="error-banner">
+            <div>{error}</div>
+            {onRecalibrate && (
+                <button type="button" onClick={onRecalibrate} className="button button-secondary">
+                    Recalibrate
+                </button>
+            )}
+        </div>
+    );
 }
 
 function CalibrationBanner() {
@@ -194,7 +210,7 @@ function SettingsPanel({
     onSetDays: (days: number) => void;
     onSetUseDateFilter: (value: boolean) => void;
 }) {
-    if (state.step !== 'START') {
+    if (state.step === 'DOWNLOADING') {
         return null;
     }
     if (state.calibrationStatus !== 'ready') {
@@ -299,14 +315,24 @@ function ExportControls({
     primaryText,
     onPrimary,
     onDownload,
+    onDownloadRedacted,
     onDownloadLogs,
+    onProbeEarliestPost,
+    onStopProbe,
+    onImportResumeJson,
 }: {
     state: ControllerState;
     primaryText: string;
     onPrimary: () => void;
     onDownload: () => Promise<void>;
+    onDownloadRedacted: () => Promise<void>;
     onDownloadLogs: () => Promise<void>;
+    onProbeEarliestPost: () => Promise<void>;
+    onStopProbe: () => void;
+    onImportResumeJson: () => Promise<void>;
 }) {
+    const [isProbeRunning, setIsProbeRunning] = useState(false);
+
     if (state.calibrationStatus !== 'ready') {
         return null;
     }
@@ -337,6 +363,58 @@ function ExportControls({
                 >
                     Logs
                 </button>
+            </div>
+
+            <div className="debug-controls">
+                <div className="debug-controls-label">Debug tools</div>
+                <div className="debug-controls-actions">
+                    {!isProbeRunning && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsProbeRunning(true);
+                                void onProbeEarliestPost()
+                                    .catch(() => {})
+                                    .finally(() => {
+                                        setIsProbeRunning(false);
+                                    });
+                            }}
+                            className="button button-secondary button-compact"
+                        >
+                            Probe Earliest
+                        </button>
+                    )}
+                    {isProbeRunning && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                onStopProbe();
+                                setIsProbeRunning(false);
+                            }}
+                            className="button button-secondary button-compact"
+                        >
+                            Stop Probe
+                        </button>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            void onImportResumeJson().catch(() => {});
+                        }}
+                        className="button button-secondary button-compact"
+                    >
+                        Resume
+                    </button>
+                    <button
+                        type="button"
+                        onClick={() => {
+                            void onDownloadRedacted().catch(() => {});
+                        }}
+                        className="button button-secondary button-compact"
+                    >
+                        JSON (Redacted)
+                    </button>
+                </div>
             </div>
         </>
     );
@@ -371,7 +449,11 @@ export function App({
     onStop,
     onContinue,
     onDownload,
+    onDownloadRedacted,
     onDownloadLogs,
+    onProbeEarliestPost,
+    onStopProbe,
+    onImportResumeJson,
     onSetMode,
     onSetCount,
     onSetDays,
@@ -386,6 +468,10 @@ export function App({
     const stepPillClass = getStepPillClass(state.step);
     const calibrationPillClass = getCalibrationPillClass(state.calibrationStatus);
     const calibrationLabel = getCalibrationLabel(state.calibrationStatus);
+    const showRecalibrateFromError =
+        state.step !== 'DOWNLOADING' &&
+        state.calibrationStatus !== 'capturing' &&
+        shouldSuggestRecalibrationFromError(state.error);
 
     useEffect(() => {
         const node = logsViewportRef.current;
@@ -421,7 +507,7 @@ export function App({
             onStop();
             return;
         }
-        onOpen(false);
+        await onStart();
     };
 
     return (
@@ -440,13 +526,18 @@ export function App({
                                     label="Calibration"
                                     value={calibrationLabel}
                                     pillClass={calibrationPillClass}
-                                    {...(state.calibrationStatus === 'ready' && state.step === 'START'
+                                    {...(state.calibrationStatus === 'ready' && state.step !== 'DOWNLOADING'
                                         ? { action: { onClick: onCalibrationStart, title: 'Recalibrate' } }
                                         : {})}
                                 />
                             </div>
 
-                            {state.error && <ErrorBanner error={state.error} />}
+                            {state.error && (
+                                <ErrorBanner
+                                    error={state.error}
+                                    {...(showRecalibrateFromError ? { onRecalibrate: onCalibrationStart } : {})}
+                                />
+                            )}
 
                             {state.calibrationStatus !== 'ready' && <CalibrationBanner />}
 
@@ -469,9 +560,13 @@ export function App({
                                 <ExportControls
                                     state={state}
                                     primaryText={getPrimaryText(state.step, state.isOnLimit)}
-                                    onPrimary={() => void handlePrimary()}
+                                    onPrimary={() => void handlePrimary().catch(() => {})}
                                     onDownload={onDownload}
+                                    onDownloadRedacted={onDownloadRedacted ?? onDownload}
                                     onDownloadLogs={onDownloadLogs}
+                                    onProbeEarliestPost={onProbeEarliestPost ?? (async () => {})}
+                                    onStopProbe={onStopProbe ?? (() => {})}
+                                    onImportResumeJson={onImportResumeJson ?? (async () => {})}
                                 />
                             )}
 

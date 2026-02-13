@@ -213,14 +213,40 @@ export async function requestCalibrationAction<T = unknown>(
     action: CalibrationBridgeAction,
     timeoutMs = 4000,
     payload?: unknown,
+    signal?: AbortSignal,
 ): Promise<T> {
     const id = `ampoose-calibration-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
     return await new Promise<T>((resolve, reject) => {
-        const timeout = window.setTimeout(() => {
+        let settled = false;
+
+        const cleanup = () => {
+            window.clearTimeout(timeout);
             window.removeEventListener('message', onMessage);
-            reject(new Error(`Calibration bridge timeout for action ${action}`));
-        }, timeoutMs);
+            signal?.removeEventListener('abort', onAbort);
+        };
+
+        const rejectOnce = (error: Error) => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            cleanup();
+            reject(error);
+        };
+
+        const resolveOnce = (value: T) => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            cleanup();
+            resolve(value);
+        };
+
+        const onAbort = () => {
+            rejectOnce(new Error(`Calibration action aborted: ${action}`));
+        };
 
         const onMessage = (event: MessageEvent) => {
             if (event.source !== window) {
@@ -233,17 +259,24 @@ export async function requestCalibrationAction<T = unknown>(
                 return;
             }
 
-            window.clearTimeout(timeout);
-            window.removeEventListener('message', onMessage);
-
             if (!event.data.ok) {
-                reject(new Error(event.data.error ?? `Calibration action failed: ${action}`));
+                rejectOnce(new Error(event.data.error ?? `Calibration action failed: ${action}`));
                 return;
             }
-            resolve(event.data.result as T);
+            resolveOnce(event.data.result as T);
         };
 
+        const timeout = window.setTimeout(() => {
+            rejectOnce(new Error(`Calibration bridge timeout for action ${action}`));
+        }, timeoutMs);
+
+        if (signal?.aborted) {
+            onAbort();
+            return;
+        }
+
         window.addEventListener('message', onMessage);
+        signal?.addEventListener('abort', onAbort, { once: true });
         window.postMessage(
             {
                 __ampooseCalibrationReq: true,

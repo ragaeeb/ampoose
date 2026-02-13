@@ -1,5 +1,5 @@
 import { expect, it } from 'bun:test';
-import { buildExportEnvelope, stringifyExportData } from '../../src/domain/export/envelope';
+import { buildExportEnvelope, stringifyExportData } from '@/domain/export/envelope';
 
 it('should match export contract envelope keys and post whitelist', () => {
     const input = [
@@ -30,7 +30,10 @@ it('should match export contract envelope keys and post whitelist', () => {
     expect(Object.keys(envelope)).toEqual(['author', 'posts', 'profile']);
     expect(envelope.profile).toBe('https://www.facebook.com/author');
     expect(envelope.author).toEqual({ id: 'a1', name: 'Author Name' });
-    expect(envelope.posts).toEqual([{ content: 'hello', createdAt: 123, id: 'p1' }]);
+    expect(envelope.posts).toEqual([
+        { content: 'hello', createdAt: 123, id: 'p1' },
+        { content: 'has attachment', id: 'p2' },
+    ]);
 
     const pretty = stringifyExportData(envelope);
     expect(pretty.includes('\n  "posts": [\n')).toBe(true);

@@ -1,12 +1,12 @@
 import { expect, it } from 'bun:test';
-import { buildGraphqlArtifact } from '../../src/domain/calibration/artifact';
+import { buildGraphqlArtifact } from '@/domain/calibration/artifact';
 import {
     buildCollectionRelativeFilename,
     extractProfileIdFromUrl,
     extractProfileUsername,
     resolveCollectionContext,
     resolveCollectionFolderName,
-} from '../../src/runtime/controller/collectionPath';
+} from '@/runtime/controller/collectionPath';
 
 const createArtifactWithProfileId = (id: string) => {
     return buildGraphqlArtifact({

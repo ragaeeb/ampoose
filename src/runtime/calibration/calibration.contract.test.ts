@@ -3,8 +3,8 @@ import {
     buildGraphqlArtifact,
     getMissingRequiredQueries,
     normalizeGraphqlArtifact,
-} from '../../src/domain/calibration/artifact';
-import { createGraphqlClient } from '../../src/domain/graphql/client';
+} from '@/domain/calibration/artifact';
+import { createGraphqlClient } from '@/domain/graphql/client';
 
 it('should handle missing/partial/valid calibration contract', () => {
     const missing = normalizeGraphqlArtifact(null);

@@ -221,7 +221,15 @@ select {
   color: var(--color-text-secondary);
   font-weight: var(--font-weight-normal);
   font-size: 20px;
+  line-height: 1;
+  padding: 0;
   transition: background-color 0.2s, color 0.2s;
+}
+
+.modal-header-close-icon {
+  display: block;
+  line-height: 1;
+  transform: translateY(-1px);
 }
 
 .modal-header-close:hover {
@@ -311,6 +319,8 @@ select {
   border: 1px solid #ffcdd2;
   border-radius: var(--radius-lg);
   color: #c62828;
+  display: grid;
+  gap: 8px;
   padding: 12px;
   font-size: 13px;
 }
@@ -420,6 +430,13 @@ select {
   padding: 0 var(--spacing-lg);
 }
 
+.button-compact {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  height: 30px;
+  padding: 0 var(--spacing-md);
+}
+
 /* Stats Display */
 .stats-display {
   background: #f0f2f5;
@@ -485,4 +502,22 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: var(--spacing-sm);
+}
+
+.debug-controls {
+  align-items: center;
+  display: flex;
+  gap: var(--spacing-sm);
+}
+
+.debug-controls-label {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  text-transform: uppercase;
+}
+
+.debug-controls-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs);
 }

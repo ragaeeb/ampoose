@@ -22,9 +22,13 @@ const listFiles = (root: string) => {
 it('should not contain graphql-info.ampoose.local references in runtime source', () => {
     const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
     const files = listFiles(path.join(root, 'src'));
+    const selfPath = fileURLToPath(import.meta.url);
 
     const offenders: string[] = [];
     for (const file of files) {
+        if (file === selfPath) {
+            continue;
+        }
         const source = fs.readFileSync(file, 'utf8');
         if (source.includes('graphql-info.ampoose.local')) {
             offenders.push(file);

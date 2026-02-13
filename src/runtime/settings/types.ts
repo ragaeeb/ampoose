@@ -1,4 +1,5 @@
 export type FetchingCountType = 0 | 1 | 2 | 3;
+export type RuntimeLogLevel = 'error' | 'warn' | 'info' | 'debug';
 
 export const FETCH_MODE = {
     ALL: 0,
@@ -14,6 +15,7 @@ export type RuntimeSettings = {
     isUsePostsFilter: boolean;
     requestDelay: number;
     fetchLimit: number;
+    logLevel: RuntimeLogLevel;
 };
 
 export function createDefaultSettings(): RuntimeSettings {
@@ -23,6 +25,7 @@ export function createDefaultSettings(): RuntimeSettings {
         fetchingCountType: FETCH_MODE.ALL,
         fetchLimit: Number.MAX_SAFE_INTEGER,
         isUsePostsFilter: false,
-        requestDelay: 0,
+        logLevel: 'info',
+        requestDelay: 250,
     };
 }

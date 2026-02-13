@@ -6,6 +6,7 @@ export type GraphqlRequestInput = {
     variables?: Record<string, unknown>;
     endpoint?: string;
     responseMode?: 'single' | 'all';
+    signal?: AbortSignal;
 };
 
 export type GraphqlFetchImpl = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
@@ -283,6 +284,7 @@ export function createGraphqlClient(deps: GraphqlClientDeps) {
         endpoint: string,
         queryName: string,
         body: URLSearchParams,
+        signal: AbortSignal | undefined,
         responseMode: 'single' | 'all',
     ): Promise<unknown> {
         const response = await fetchImpl(endpoint, {
@@ -293,6 +295,7 @@ export function createGraphqlClient(deps: GraphqlClientDeps) {
                 'X-FB-Friendly-Name': queryName,
             },
             method: 'POST',
+            signal,
         });
 
         if (!response.ok) {
@@ -391,6 +394,7 @@ export function createGraphqlClient(deps: GraphqlClientDeps) {
                         endpoint,
                         requestInput.queryName,
                         buildRequestBody(params, requestInput, entry.docId),
+                        requestInput.signal,
                         requestInput.responseMode ?? 'single',
                     )) as T;
                 } catch (error) {

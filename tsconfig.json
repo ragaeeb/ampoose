@@ -16,5 +16,5 @@
         "skipLibCheck": true,
         "resolveJsonModule": true
     },
-    "include": ["src", "tests", "wxt.config.ts", "test-setup.ts", "release.config.mjs"]
+    "include": ["src", "wxt.config.ts", "test-setup.ts", "release.config.mjs"]
 }

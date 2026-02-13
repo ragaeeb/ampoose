@@ -20,14 +20,18 @@ describe('export sanitize', () => {
         expect(hasPostAttachments({})).toBe(false);
     });
 
-    it('should filter out posts without id/content or with attachments', () => {
+    it('should filter out posts without id/content and keep text posts even with attachments', () => {
         expect(shouldExportPost({ post_id: '1', content: '' })).toBe(false);
-        expect(shouldExportPost({ post_id: '1', content: 'hi', attachments: [{}] })).toBe(false);
+        expect(shouldExportPost({ post_id: '1', content: 'hi', attachments: [{}] })).toBe(true);
         expect(shouldExportPost({ post_id: '1', content: 'hi' })).toBe(true);
     });
 
     it('should build an export post with optional createdAt', () => {
         expect(sanitizeExportPost({ post_id: '1', content: ' hello ' })).toEqual({ content: 'hello', id: '1' });
+        expect(sanitizeExportPost({ post_id: '2', content: 'kept', attachments: [{ id: 'a1' }] })).toEqual({
+            content: 'kept',
+            id: '2',
+        });
         expect(sanitizeExportPost({ post_id: '1', content: 'hello', createdAt: 123 })).toEqual({
             content: 'hello',
             createdAt: 123,
@@ -35,4 +39,3 @@ describe('export sanitize', () => {
         });
     });
 });
-

@@ -1,6 +1,6 @@
 import { expect, it } from 'bun:test';
 import { Window } from 'happy-dom';
-import { findFirstPostPermalinkLink, isLikelyPostPermalink, preparePostLinkForOpen } from '../../src/runtime/calibration/postLink';
+import { findFirstPostPermalinkLink, isLikelyPostPermalink, preparePostLinkForOpen } from '@/runtime/calibration/postLink';
 
 it('should ignore profile tab links and keep concrete post links', () => {
     expect(isLikelyPostPermalink('/some.profile/posts')).toBe(false);

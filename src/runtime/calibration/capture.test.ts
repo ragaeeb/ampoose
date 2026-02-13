@@ -31,7 +31,7 @@ describe('calibration capture (extra)', () => {
         const artifact = manager.buildArtifact();
         expect((artifact as any).entries.ProfileCometTimelineFeedRefetchQuery.docId).toBe('111');
         expect((artifact as any).entries.ProfileCometTimelineFeedRefetchQuery.variables.cursor).toBeUndefined();
-        expect((artifact as any).entries.ProfileCometTimelineFeedRefetchQuery.requestParams?.lsd).toBe('keep-this');
+        expect((artifact as any).entries.ProfileCometTimelineFeedRefetchQuery.requestParams?.lsd).toBeUndefined();
 
         restore();
     });
@@ -125,6 +125,10 @@ describe('calibration capture (extra)', () => {
                 fb_api_req_friendly_name: 'profilecomettimelinefeedrefetchquery_alias',
                 kept: '1',
                 lsd: 'secret',
+                __a: '1',
+                __csr: 'csr',
+                __req: '3',
+                __s: 'abc',
                 __spin_r: 'x',
                 empty: '',
                 variables: 123,
@@ -143,7 +147,9 @@ describe('calibration capture (extra)', () => {
         const artifact = manager.buildArtifact() as any;
         expect(artifact.entries.ProfileCometTimelineFeedRefetchQuery.docId).toBe('779');
         expect(artifact.entries.CometSinglePostDialogContentQuery.docId).toBe('780');
-        expect(artifact.entries.ProfileCometTimelineFeedRefetchQuery.requestParams).toEqual({ kept: '1', lsd: 'secret' });
+        expect(artifact.entries.ProfileCometTimelineFeedRefetchQuery.requestParams).toEqual({
+            kept: '1',
+        });
         expect(artifact.entries.ProfileCometTimelineFeedRefetchQuery.variables).toEqual({});
         restore();
     });

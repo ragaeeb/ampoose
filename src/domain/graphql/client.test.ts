@@ -24,7 +24,7 @@ afterEach(() => {
 });
 
 describe('graphql client extra branches', () => {
-    it('should keep required calibration request params for fallback retries when ambient params are unavailable', async () => {
+    it('should preserve non-sensitive calibration request params for fallback retries when ambient params are unavailable', async () => {
         const originalQuerySelector = document.querySelector.bind(document);
         const originalFetch = window.fetch;
         (window as any).fetch = async () => new Response('{}', { status: 200 });
@@ -37,7 +37,7 @@ describe('graphql client extra branches', () => {
             body: JSON.stringify({
                 doc_id: '123',
                 fb_api_req_friendly_name: 'ProfileCometTimelineFeedRefetchQuery',
-                lsd: 'LSD_REQUIRED',
+                kept: 'KEEP_REQUIRED',
                 variables: { id: '456' },
             }),
             method: 'POST',
@@ -47,7 +47,7 @@ describe('graphql client extra branches', () => {
         const client = createGraphqlClient({
             fetchImpl: (async (_input: RequestInfo | URL, init?: RequestInit) => {
                 const body = String(init?.body ?? '');
-                if (body.includes('lsd=LSD_REQUIRED')) {
+                if (body.includes('kept=KEEP_REQUIRED')) {
                     return new Response(JSON.stringify({ data: { ok: true } }), { status: 200 });
                 }
                 return new Response('', { status: 200 });

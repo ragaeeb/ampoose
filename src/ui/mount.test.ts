@@ -4,13 +4,15 @@ import { createMountApp } from '@/ui/mount';
 describe('mountApp', () => {
     it('should wire controller actions and bridge calls', async () => {
         const sendRuntimeMessage = mock(async () => ({ ok: true }));
-        const requestCalibrationAction = mock(async (_action: string, _timeoutMs?: number, _payload?: unknown) => ({
-            body: '{}',
-            ok: true,
-            status: 200,
-            statusText: 'OK',
-            url: '',
-        }));
+        const requestCalibrationAction = mock(
+            async (_action: string, _timeoutMs?: number, _payload?: unknown, _signal?: AbortSignal) => ({
+                body: '{}',
+                ok: true,
+                status: 200,
+                statusText: 'OK',
+                url: '',
+            }),
+        );
 
         const loadCalibrationArtifact = mock(async () => null);
         const saveCalibrationArtifact = mock(async () => {});
@@ -61,13 +63,21 @@ describe('mountApp', () => {
                     method: 'POST',
                 });
 
+                    const fetchAbort = new AbortController();
+                    await deps.fetchImpl('/api/graphql/', {
+                        method: 'POST',
+                        signal: fetchAbort.signal,
+                    });
+
                     await deps.fetchImpl('/api/graphql/', { method: 'POST' });
                     return { ok: true };
                 },
             };
         });
 
-        const queryProfileTimelinePage = mock(async (client: any) => {
+        let lastQueryInput: any;
+        const queryProfileTimelinePage = mock(async (client: any, input: any) => {
+            lastQueryInput = input;
             await client.request({ queryName: 'ProfileCometTimelineFeedRefetchQuery' });
             return { nextCursor: null, posts: [] };
         });
@@ -154,9 +164,27 @@ describe('mountApp', () => {
                 await this.deps.downloadClient.downloadTextAsFile('x', 'posts.json', 'application/json', false);
             }
 
+            async downloadJsonRedacted() {
+                controllerCalls.push('downloadJsonRedacted');
+                await this.deps.downloadClient.downloadTextAsFile(
+                    'x',
+                    'posts-redacted.json',
+                    'application/json',
+                    false,
+                );
+            }
+
             async downloadLogsJson() {
                 controllerCalls.push('downloadLogsJson');
                 await this.deps.downloadClient.downloadTextAsFile('x', 'logs.json', 'application/json', false);
+            }
+
+            async probeEarliestAccessiblePost() {
+                controllerCalls.push('probeEarliestAccessiblePost');
+            }
+
+            stopProbe() {
+                controllerCalls.push('stopProbe');
             }
 
             async startCalibrationCapture() {
@@ -202,7 +230,10 @@ describe('mountApp', () => {
 
         await captured.onStart();
         await captured.onDownload();
+        await captured.onDownloadRedacted();
         await captured.onDownloadLogs();
+        await captured.onProbeEarliestPost();
+        captured.onStopProbe();
         captured.onOpen(true);
         captured.onSetMode(1);
         captured.onSetCount(10);
@@ -218,7 +249,17 @@ describe('mountApp', () => {
         expect(queryProfileTimelinePage).toHaveBeenCalledTimes(1);
         expect(requestCalibrationAction).toHaveBeenCalled();
         expect(sendRuntimeMessage).toHaveBeenCalledWith('downloadTextAsFile', ['x', 'posts.json', 'application/json', false]);
+        expect(sendRuntimeMessage).toHaveBeenCalledWith(
+            'downloadTextAsFile',
+            ['x', 'posts-redacted.json', 'application/json', false],
+        );
         expect(sendRuntimeMessage).toHaveBeenCalledWith('downloadTextAsFile', ['x', 'logs.json', 'application/json', false]);
+        expect(controllerCalls).toContain('probeEarliestAccessiblePost');
+        expect(controllerCalls).toContain('stopProbe');
+        expect(lastQueryInput?.signal).toBeInstanceOf(AbortSignal);
+        expect(
+            requestCalibrationAction.mock.calls.some((call) => call[3] instanceof AbortSignal),
+        ).toBe(true);
 
         unmount();
         expect(controllerCalls).toContain('stopCalibrationCapture');

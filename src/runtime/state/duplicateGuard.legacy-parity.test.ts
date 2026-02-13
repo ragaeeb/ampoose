@@ -1,5 +1,5 @@
 import { expect, it } from 'bun:test';
-import { createDuplicatePageGuard } from '../../src/runtime/state/duplicateGuard';
+import { createDuplicatePageGuard } from '@/runtime/state/duplicateGuard';
 
 it('should stop after 5 full-duplicate pages', () => {
     const guard = createDuplicatePageGuard(5);

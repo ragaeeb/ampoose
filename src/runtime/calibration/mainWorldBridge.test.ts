@@ -357,6 +357,13 @@ describe('mainWorldBridge', () => {
         expect(error?.message).toMatch(/timeout/i);
     });
 
+    it('should reject requestCalibrationAction when aborted by signal', async () => {
+        const controller = new AbortController();
+        const promise = requestCalibrationAction('status', 200, undefined, controller.signal);
+        controller.abort();
+        await expect(promise).rejects.toThrow(/aborted/i);
+    });
+
     it('should ignore mismatched responses and reject on explicit bridge failure', async () => {
         const onReq = (event: MessageEvent) => {
             if (event.source !== window) {
